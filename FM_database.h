@@ -139,8 +139,8 @@ class database
 
 		void heap_up( index_t handler , index_t pos );
 		void heap_down( index_t handler , index_t pos );
-		void heap_add( index_t handler , index_t );
-		void heap_del();
+		void heap_add( index_t handler , index_t pos );
+		void heap_del( index_t pos );
 		void heap_min();
 
 	/* constant */
