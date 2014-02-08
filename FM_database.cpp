@@ -76,17 +76,67 @@ index_t database::hash( string value )
 
 }
 
-void database::heap_up()
+void swap_heap_entry( index_t handler , size_t i , size_t j )
 {
-
-
+	table* table_0=tables[handler];
+	heap_entry tmp=table_0->heap[j];
+	table_0->heap[j]=table_0->heap[i];
+	table_0->heap[i]=tmp;
 }
 
-void database::heap_down()
+void database::heap_up( index_t handler , size_t pos )
 {
-
-
-
+	table* table_0=tables[handler];
+	size_t i=pos/2;
+	if (i>0)
+		if ( table_0->heap[i].count > table_0->heap[pos] )
+		{
+			swap_heap_entry( handler , pos , i );
+			heap_up( handler , i );
+		}
 }
+
+void database::heap_down( indext_t handler , size_t pos )
+{
+	table* table_0=tables[handler]
+	size_t i=pos
+	if (pos*2 <= table_0->heap.size()-1)
+	{
+		if ( table_0->heap[pos].count > table_0->heap[pos*2].count )
+			i=pos*2;
+		if ( pos*2+1 <= table_0->heap.size()-1 &&
+			table_0->heap[i].count > table_0->heap[pos*2+1].count )
+			i=pos*2+1;
+	}
+	if ( i>pos )
+	{
+		swap_heap_entry( handler , pos , i );
+		heap_down( handler , i );
+	}
+}
+
+void database::heap_del( index_t handler , size_t pos )
+{
+	table* table_0=tables[handler];
+	swap_heap_entry( handler , pos , table_0->heap.size()-1 )
+	table_0->heap.pop_back();
+	heap_up( handler , pos );
+	heap_down( handler , pos );
+}
+		
+void database::heap_add( index_t handler , size_t hashed_value_0 , size_t 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

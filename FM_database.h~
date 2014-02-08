@@ -47,7 +47,7 @@ class key
 	index_t index;
 	index_t order;
 	string value;
-}
+};
 
 class cache_entry
 {
@@ -55,14 +55,19 @@ class cache_entry
 
 	entry e;
 	index_t next;
-}
+};
 
 class hash_table_entry
 {
 	index_t pos;
 	index_t cache_head;
-}
+};
 
+class heap_entry
+{
+	index_t hashed_value;
+	index_t count;
+};
 
 
 class table
@@ -73,8 +78,8 @@ class table
 	vector<fstream*> keyios;
 
 	vector<cache_entry> cache;
-	vector< pair<index_t,index_t> > hash_table;
-	vector< pair<index_t,index_t> > heap; // pair<hash_value,count>
+	vector<hash_table_entry> hash_table;
+	vector<heap_entry> heap; 
 
 	data_meta data_meta_0;
 	vector<key_meta> key_metas;
