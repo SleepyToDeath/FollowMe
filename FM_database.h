@@ -59,8 +59,10 @@ class cache_entry
 
 class hash_table_entry
 {
+	string key;
 	index_t pos;
 	index_t cache_head;
+	index_t next;
 };
 
 class heap_entry
@@ -130,17 +132,24 @@ class database
 	string get_key( index_t handler , index_t key_handler , index_t index );
 	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , string value );
 
-	/* TODO complete the string hash */
-	void init_hash();
-	index_t h( index_t value );
-	index_t h( string value );
+	/* hash */
 
-		/* heap */
+		/* TODO complete the string hash */
+		void init_hash();
+		index_t find_hash( index_t handler , string key );
+		void add_hash( index_t handler , string key );
+		void del_hash( index_t handler , string key );
+		index_t next_hash( index_t current );
+		index_t hash( index_t value );
+		index_t hash( string value );
+
+	/* heap */
 
 		void heap_up( index_t handler , index_t pos );
 		void heap_down( index_t handler , index_t pos );
 		void heap_add( index_t handler , index_t pos );
-		void heap_del( index_t pos );
+		void heap_del( index_t handler , index_t pos );
+		void heap_inc( index_t handler , string key );
 		void heap_min();
 
 	/* constant */

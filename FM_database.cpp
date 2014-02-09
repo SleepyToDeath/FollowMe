@@ -79,6 +79,8 @@ index_t database::hash( string value )
 void swap_heap_entry( index_t handler , index_t i , index_t j )
 {
 	table* table_0=tables[handler];
+	table_0->hash_table[table_0->heap[i].hash_value].pos=j;
+	table_0->hash_table[table_0->heap[j].hash_value].pos=i;
 	heap_entry tmp=table_0->heap[j];
 	table_0->heap[j]=table_0->heap[i];
 	table_0->heap[i]=tmp;
@@ -127,8 +129,15 @@ void database::heap_del( index_t handler , index_t pos )
 void database::heap_add( index_t handler , index_t hashed_value_0 , index_t count_0 )
 {
 
+	
+
 }
 
+void database::heap_inc( index_t handler , string key )
+{
+
+
+}
 
 
 
