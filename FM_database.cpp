@@ -12,9 +12,6 @@ database::~database()
 		cache_size=atoi(s.substr(pos+1,s.length()-pos-1));
 	}
 
-	
-
-	init_hash();
 }
 
 index_t database::new_table( index_t len )
@@ -44,35 +41,6 @@ index_t database::del( index_t handler , index_t index )
 string get( index handler , index_t index )
 {
 
-
-}
-
-void database::init_hash()
-{
-	vector<bool> prime(false,cache_size+1);
-	memset(prime,0,sizeof(prime));
-	for (int i=2;i*i<=cache_size;i++)
-	{
-		if (!prime[i])
-			for (j=1;i*j<=cache_size;j++)
-				prime[i*j]=true;
-	}
-	for (int j=cache_size;j>1;j--)
-		if (!prime[j])
-		{
-			prime_0=j;
-			break;
-		}
-
-}
-
-index_t database::hash( index_t value )
-{
-	return value%prime_0;
-}
-
-index_t database::hash( string value )
-{
 
 }
 
@@ -139,10 +107,41 @@ void database::heap_inc( index_t handler , string key )
 
 }
 
+template<class key_t , class value_t>
+hash::hash( index_t size )
+{
+	vector<bool> prime(false,size+1);
+	for (int i=2;i*i<=cache_size;i++)
+	{
+		if (!prime[i])
+			for (j=1;i*j<=cache_size;j++)
+				prime[i*j]=true;
+	}
+	for (int j=cache_size;j>1;j--)
+		if (!prime[j])
+		{
+			prime_0=j;
+			break;
+		}
 
+}
 
+template<class key_t , class value_t>
+index_t hash::h( index_t value )
+{
+	return value%prime_0;
+}
 
+template<class key_t , class value_t>
+index_t hash::h( string value )
+{
 
+}
+
+template<class key_t , class value_t>
+value_t& operator hash::[](index_t pos)
+{
+	return table[pos].second;
 
 
 

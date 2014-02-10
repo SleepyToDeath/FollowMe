@@ -106,6 +106,30 @@ class table
  * TODO all keys must be set before using right now
  */
 
+template<class key_t , class value_t>
+class hash
+{
+
+	public:
+
+	/* TODO complete the string hash */
+	hash();
+	index_t find( index_t handler , string key );
+	void add( index_t handler , string key );
+	void del( index_t handler , string key );
+	value_t& operator[]( index_t handler );
+
+	private:
+
+	index_t h( index_t value );
+	index_t h( string value );
+	index_t next_pos( index_t current );
+
+	vector<pair<key_t,value_t>> table;
+
+
+};
+
 class database
 {
 
@@ -132,16 +156,6 @@ class database
 	string get_key( index_t handler , index_t key_handler , index_t index );
 	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , string value );
 
-	/* hash */
-
-		/* TODO complete the string hash */
-		void init_hash();
-		index_t find_hash( index_t handler , string key );
-		void add_hash( index_t handler , string key );
-		void del_hash( index_t handler , string key );
-		index_t next_hash( index_t current );
-		index_t hash( index_t value );
-		index_t hash( string value );
 
 	/* heap */
 
