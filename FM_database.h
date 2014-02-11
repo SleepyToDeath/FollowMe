@@ -10,6 +10,10 @@ class db_meta
 {
 	public:
 
+	index_t cache_size;
+	index_t cache_capacity;
+	index_t block_size;
+
 };
 
 class key_meta
@@ -18,7 +22,7 @@ class key_meta
 
 };
 
-class data_meta 
+class table_meta 
 {
 	public:
 
@@ -26,8 +30,9 @@ class data_meta
 	index_t entry_sum;
 	index_t free_head;
 	index_t key_sum;
-	vector<index_t> key_len;
+	std::vector<index_t> key_len;
 	index_t max_order;
+
 };
 
 class entry
@@ -36,8 +41,8 @@ class entry
 
 	index_t index;
 	index_t order;
-	string value;
-	vector<string> keys;
+	std::string value;
+	std::vector<std::string> keys;
 };
 
 class key
@@ -46,7 +51,7 @@ class key
 
 	index_t index;
 	index_t order;
-	string value;
+	std::string value;
 };
 
 class cache_entry
@@ -57,34 +62,62 @@ class cache_entry
 	index_t next;
 };
 
+template<class key_t , class value_t>
 class hash_table_entry
 {
-	string key;
-	index_t pos;
-	index_t cache_head;
-	index_t next;
+	public:
+
+	hash_table_entry();
+
+	bool valid;
+	bool used;
+	key_t key;
+	value_t value;
 };
 
 class heap_entry
 {
+	public:
 	index_t hashed_value;
 	index_t count;
 };
 
+template<class key_t , class value_t>
+class hash
+{
+
+	public:
+
+	hash();
+	void add( index_t handler , std::string key );
+	void del( index_t handler , std::string key );
+	value_t& operator[]( key_t key );
+
+	private:
+
+	index_t h( index_t value );
+	index_t h( std::string value );
+	index_t next_pos( index_t current );
+
+	std::vector<hash_table_entry> table;
+
+	index_t prime_0;
+
+};
 
 class table
 {
 	public:
 
-	fstream dataio;
-	vector<fstream*> keyios;
+	std::fstream dataio;
+	std::vector<std::fstream*> keyios;
 
-	vector<cache_entry> cache;
-	vector<hash_table_entry> hash_table;
-	vector<heap_entry> heap; 
+	std::vector<cache_entry> cache;
+	std::vector<heap_entry> heap; 
+	hash<std::string,index_t> hash_0; // key , pos
 
-	data_meta data_meta_0;
-	vector<key_meta> key_metas;
+	table_meta table_meta_0;
+	std::vector<key_meta> key_metas;
 
 };
 
@@ -106,30 +139,6 @@ class table
  * TODO all keys must be set before using right now
  */
 
-template<class key_t , class value_t>
-class hash
-{
-
-	public:
-
-	/* TODO complete the string hash */
-	hash();
-	index_t find( index_t handler , string key );
-	void add( index_t handler , string key );
-	void del( index_t handler , string key );
-	value_t& operator[]( index_t handler );
-
-	private:
-
-	index_t h( index_t value );
-	index_t h( string value );
-	index_t next_pos( index_t current );
-
-	vector<pair<key_t,value_t>> table;
-
-
-};
-
 class database
 {
 
@@ -142,19 +151,19 @@ class database
 	index_t init_table( index_t handler );
 
 	index_t add_key( index_t handler , index_t len , bool central );
-	void get_index( index_t handler , index_t 
+	void get_index( index_t handler , index_t key_handler , std::string key );
 	index_t search();
 
 	index_t del( index_t handler , index_t index );
-	index_t add( index_t handler , char* value , vector<string> keys=vector() );
-	string get( index handler , index_t index );
+	index_t add( index_t handler , char* value , std::vector<std::string> keys=std::vector<std::string>() );
+	std::string get( index_t handler , index_t index );
 
 	private:
 
 	/* helper functions */
 
-	string get_key( index_t handler , index_t key_handler , index_t index );
-	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , string value );
+	std::string get_key( index_t handler , index_t key_handler , index_t index );
+	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , std::string value );
 
 
 	/* heap */
@@ -163,20 +172,17 @@ class database
 		void heap_down( index_t handler , index_t pos );
 		void heap_add( index_t handler , index_t pos );
 		void heap_del( index_t handler , index_t pos );
-		void heap_inc( index_t handler , string key );
+		void heap_inc( index_t handler , std::string key );
 		void heap_min();
 
 	/* constant */
 
-	index_t cache_size;
-	index_t cache_capacity;
-	index_t prime_0;
-	char init_file_name[]="database.ini";
+	std::string init_file_name="database.ini";
+	db_meta db_meta_0;
 
 	/* variable */
 
-
-	vector<table*> tables;
+	std::vector<table*> tables;
 
 
 };

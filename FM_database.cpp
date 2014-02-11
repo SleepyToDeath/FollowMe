@@ -107,6 +107,12 @@ void database::heap_inc( index_t handler , string key )
 
 }
 
+
+template<class key_t , class value_t>
+hash_table_entry::hash_table_entry():valid(false),used(false)
+{
+}
+
 template<class key_t , class value_t>
 hash::hash( index_t size )
 {
@@ -123,31 +129,74 @@ hash::hash( index_t size )
 			prime_0=j;
 			break;
 		}
+	table=vector<hash_table_entry>(hash_table_entry(),size+1);
 
 }
 
 template<class key_t , class value_t>
-index_t hash::h( index_t value )
+index_t hash::h0( index_t value )
 {
 	return value%prime_0;
 }
 
 template<class key_t , class value_t>
-index_t hash::h( string value )
+index_t hash::h0( string value ) // BKDR hash
 {
+	index_t hash=0;
+	index_t seed=131313; //strange hm......
+	int l=value.length();
+	for (int i=0;i<l;i++)
+		hash = hash * seed + value[i];
+
+	return hash % prime_0;
+}
+
+template<class key_t , class value_t>
+value_t& operator hash::[](key_t key)
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (!table[hash_value].used || table[hash_value].valid && table[hash_value].key==key)
+			return table[hash_value].value;
+	}
+	return -1;
+}
+
+template<class key_t , class value_t>
+void add( key_t key , value_t value )
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (!table[hash_value].used || !table[hash_value].valid || table[hash_value].key==key)
+		{
+			table[hash_value].used=true;
+			table[hash_value].valid=true;
+			table[hash_value].key=key;
+			table[hash_value].value=value;
+			break;
+		}
+	}
 
 }
 
 template<class key_t , class value_t>
-value_t& operator hash::[](index_t pos)
+void del( key_t key )
 {
-	return table[pos].second;
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (table[hash_value].used && table[hash_value].valid && table[hash_value].key==key)
+		{
+			table[hash_value].valid=false;
+		}
+	}
+}
 
-
-
-
-
-
-
-
-
+template<class key_t , class value_t>
+index_t hash::h( value_t key , index_t i )
+{
+	index_t key_1=h0(key);
+	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
+}
