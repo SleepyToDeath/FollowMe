@@ -14,6 +14,8 @@ database::~database()
 
 }
 
+/* table & cache */
+
 index_t database::new_table( index_t len )
 {
 	table* table_0=new table;
@@ -44,14 +46,16 @@ string get( index handler , index_t index )
 
 }
 
+/* heap */
+
 void swap_heap_entry( index_t handler , index_t i , index_t j )
 {
-	table* table_0=tables[handler];
-	table_0->hash_table[table_0->heap[i].hash_value].pos=j;
-	table_0->hash_table[table_0->heap[j].hash_value].pos=i;
-	heap_entry tmp=table_0->heap[j];
-	table_0->heap[j]=table_0->heap[i];
-	table_0->heap[i]=tmp;
+	table* table_0 = tables[handler];
+	table_0->hash_table[table_0->heap[i].hash_value] = j;
+	table_0->hash_table[table_0->heap[j].hash_value] = i;
+	heap_entry tmp = table_0->heap[j];
+	table_0->heap[j] = table_0->heap[i];
+	table_0->heap[i] = tmp;
 }
 
 void database::heap_up( index_t handler , index_t pos )
@@ -93,25 +97,22 @@ void database::heap_del( index_t handler , index_t pos )
 	heap_up( handler , pos );
 	heap_down( handler , pos );
 }
-		
-void database::heap_add( index_t handler , index_t hashed_value_0 , index_t count_0 )
+
+void database::heap_add( index_t handler , string key , index_t count_0 )
 {
-
-	
-
+	table* table_0=talbes[handler];
+	table_0->heap.push_back(heap_entry(key,count_0));
+	talbe_0->hash_0[key]=table_0->heap.size();
+	heap_up(table_0->heap.size()-1);
 }
 
-void database::heap_inc( index_t handler , string key )
+void database::heap_inc( index_t handler , string key , index_t delta )
 {
-
-
+	table* table_0=tables[handler];
+	table_0->heap[table_0->hash_0[key]]+=delta;
 }
 
-
-template<class key_t , class value_t>
-hash_table_entry::hash_table_entry():valid(false),used(false)
-{
-}
+/* hash */
 
 template<class key_t , class value_t>
 hash::hash( index_t size )
@@ -134,6 +135,49 @@ hash::hash( index_t size )
 }
 
 template<class key_t , class value_t>
+void hash::add( key_t key , value_t value )
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (!table[hash_value].used || !table[hash_value].valid || table[hash_value].key==key)
+		{
+			table[hash_value].used=true;
+			table[hash_value].valid=true;
+			table[hash_value].key=key;
+			table[hash_value].value=value;
+			break;
+		}
+	}
+
+}
+
+template<class key_t , class value_t>
+void hash::del( key_t key )
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (table[hash_value].used && table[hash_value].valid && table[hash_value].key==key)
+		{
+			table[hash_value].valid=false;
+		}
+	}
+}
+
+template<class key_t , class value_t>
+value_t& operator hash::[](key_t key)
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (!table[hash_value].used || table[hash_value].valid && table[hash_value].key==key)
+			return table[hash_value].value;
+	}
+	return -1;
+}
+
+template<class key_t , class value_t>
 index_t hash::h0( index_t value )
 {
 	return value%prime_0;
@@ -152,51 +196,10 @@ index_t hash::h0( string value ) // BKDR hash
 }
 
 template<class key_t , class value_t>
-value_t& operator hash::[](key_t key)
-{
-	for (int i=0;i<prime_0;i++)
-	{
-		int hash_value=h(key,i);
-		if (!table[hash_value].used || table[hash_value].valid && table[hash_value].key==key)
-			return table[hash_value].value;
-	}
-	return -1;
-}
-
-template<class key_t , class value_t>
-void add( key_t key , value_t value )
-{
-	for (int i=0;i<prime_0;i++)
-	{
-		int hash_value=h(key,i);
-		if (!table[hash_value].used || !table[hash_value].valid || table[hash_value].key==key)
-		{
-			table[hash_value].used=true;
-			table[hash_value].valid=true;
-			table[hash_value].key=key;
-			table[hash_value].value=value;
-			break;
-		}
-	}
-
-}
-
-template<class key_t , class value_t>
-void del( key_t key )
-{
-	for (int i=0;i<prime_0;i++)
-	{
-		int hash_value=h(key,i);
-		if (table[hash_value].used && table[hash_value].valid && table[hash_value].key==key)
-		{
-			table[hash_value].valid=false;
-		}
-	}
-}
-
-template<class key_t , class value_t>
 index_t hash::h( value_t key , index_t i )
 {
 	index_t key_1=h0(key);
 	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
 }
+
+

@@ -54,6 +54,42 @@ class key
 	std::string value;
 };
 
+template<class key_t , class value_t>
+class hash
+{
+
+	public:
+
+	hash();
+	void add( key_t key , value_t value );
+	void del( key_t key );
+	value_t& operator[]( key_t key );
+
+	private:
+
+	template<class key_t , class value_t>
+	class hash_table_entry
+	{
+		public:
+
+		hash_table_entry():valid(false),used(false){}
+
+		bool valid;
+		bool used;
+		key_t key;
+		value_t value;
+	};
+
+	index_t h0( index_t value );
+	index_t h0( std::string value );
+	index_t h( key_t key , index_t i );
+
+	std::vector<hash_table_entry> table;
+
+	index_t prime_0;
+
+};
+
 class cache_entry
 {
 	public:
@@ -62,48 +98,18 @@ class cache_entry
 	index_t next;
 };
 
-template<class key_t , class value_t>
-class hash_table_entry
-{
-	public:
-
-	hash_table_entry();
-
-	bool valid;
-	bool used;
-	key_t key;
-	value_t value;
-};
-
 class heap_entry
 {
 	public:
-	index_t hashed_value;
+
+	heap_entry():key(""),count(0){}
+	heap_entry( string key_0 , index_t count_0 ):key(key_0),count(count_0){}
+
+	string key;
 	index_t count;
-};
-
-template<class key_t , class value_t>
-class hash
-{
-
-	public:
-
-	hash();
-	void add( index_t handler , std::string key );
-	void del( index_t handler , std::string key );
-	value_t& operator[]( key_t key );
-
-	private:
-
-	index_t h( index_t value );
-	index_t h( std::string value );
-	index_t next_pos( index_t current );
-
-	std::vector<hash_table_entry> table;
-
-	index_t prime_0;
 
 };
+
 
 class table
 {
@@ -172,7 +178,7 @@ class database
 		void heap_down( index_t handler , index_t pos );
 		void heap_add( index_t handler , index_t pos );
 		void heap_del( index_t handler , index_t pos );
-		void heap_inc( index_t handler , std::string key );
+		void heap_inc( index_t handler , std::string key , index_t delta );
 		void heap_min();
 
 	/* constant */
