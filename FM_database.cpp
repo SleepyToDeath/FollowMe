@@ -1,5 +1,6 @@
 #include"FM_database.h"
 
+using namespace std;
 
 database::~database()
 {
@@ -9,7 +10,17 @@ database::~database()
 	if (s.find("cache_size")) 
 	{
 		size_t pos=s.find("=");
-		cache_size=atoi(s.substr(pos+1,s.length()-pos-1));
+		db_meta_0.cache_size=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
+	}
+	else if (s.find("cache_capacity")) 
+	{
+		size_t pos=s.find("=");
+		db_meta_0.cache_capacity=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
+	}
+	else if (s.find("block_size")) 
+	{
+		size_t pos=s.find("=");
+		db_meta_0.block_size=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
 	}
 
 }
@@ -20,7 +31,7 @@ index_t database::new_table( index_t len )
 {
 	table* table_0=new table;
 	tables.push_back(table_0);
-	table_0.dataio.open(itoa(tables.size(),nullptr,10)+".dat" , ios::binary | ios::in | ios::out );
+	table_0->dataio.open(itoa(tables.size(),str,10)+".dat".c_str() , ios::binary | ios::in | ios::out );
 	fstream metaio(itoa(tables.size(),nullptr,10)+".meta" , ios::binary | ios::in | ios::out );
 
 
@@ -30,9 +41,10 @@ index_t database::new_table( index_t len )
 }
 
 
-index_t database::add( index_t handler , char* value )
+index_t database::add( index_t handler , char* value , std::vector<std::string> keys );
 {
-	store* store_0=tables[handler];
+	table* table_0=tables[handler];
+	entry tmp;
 }
 
 index_t database::del( index_t handler , index_t index )
@@ -178,13 +190,27 @@ value_t& operator hash::[](key_t key)
 }
 
 template<class key_t , class value_t>
-index_t hash::h0( index_t value )
+bool hash::find(key_t key)
+{
+	for (int i=0;i<prime_0;i++)
+	{
+		int hash_value=h(key,i);
+		if (!table[hash_value].used)
+			return false;
+		else if ( table[hash_value].valid && table[hash_value].key==key)
+			return true;
+	}
+	return false;
+}
+
+template<class value_t>
+index_t hash<index_t,value_t>::h0( index_t value )
 {
 	return value%prime_0;
 }
 
-template<class key_t , class value_t>
-index_t hash::h0( string value ) // BKDR hash
+template<class value_t>
+index_t hash<string,value_t>::h0( string value ) // BKDR hash
 {
 	index_t hash=0;
 	index_t seed=131313; //strange hm......
@@ -196,7 +222,7 @@ index_t hash::h0( string value ) // BKDR hash
 }
 
 template<class key_t , class value_t>
-index_t hash::h( value_t key , index_t i )
+index_t hash::h( key_t key , index_t i )
 {
 	index_t key_1=h0(key);
 	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;

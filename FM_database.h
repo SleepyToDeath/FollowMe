@@ -67,7 +67,7 @@ class hash
 
 	private:
 
-	template<class key_t , class value_t>
+//	template<class key_t , class value_t>
 	class hash_table_entry
 	{
 		public:
@@ -94,7 +94,7 @@ class cache_entry
 {
 	public:
 
-	entry e;
+	entry entry_0;
 	index_t next;
 };
 
@@ -103,9 +103,9 @@ class heap_entry
 	public:
 
 	heap_entry():key(""),count(0){}
-	heap_entry( string key_0 , index_t count_0 ):key(key_0),count(count_0){}
+	heap_entry( std::string key_0 , index_t count_0 ):key(key_0),count(count_0){}
 
-	string key;
+	std::string key;
 	index_t count;
 
 };
@@ -153,17 +153,19 @@ class database
 	database();
 	~database();
 
+/* TODO */
+
 	index_t new_table( index_t len );
 	index_t init_table( index_t handler );
-
-	index_t add_key( index_t handler , index_t len , bool central );
-	void get_index( index_t handler , index_t key_handler , std::string key );
-	index_t search();
 
 	index_t del( index_t handler , index_t index );
 	index_t add( index_t handler , char* value , std::vector<std::string> keys=std::vector<std::string>() );
 	std::string get( index_t handler , index_t index );
 
+	index_t add_key( index_t handler , index_t len , bool central );
+	void get_index( index_t handler , index_t key_handler , std::string key );
+	index_t search();
+	
 	private:
 
 	/* helper functions */
@@ -184,6 +186,7 @@ class database
 	/* constant */
 
 	std::string init_file_name="database.ini";
+	std::string store_directory="database/";
 	db_meta db_meta_0;
 
 	/* variable */
