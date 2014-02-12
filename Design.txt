@@ -1,0 +1,24 @@
+key cache
+1.There's a cache for every key
+2.Cache for key is stored in hash
+3.An accessor for nodes in B tree
+4.Eliminate last used node
+5.Need cache size & capacity
+6.Accessor:
+	in cache ?
+		yes:
+			get it & change timestamp
+		no:
+			get it from disk & add it to cache & add it to the end of chain
+7.Cache entry:
+	node*
+	front pointer
+	back pointer
+8.timestamp: order in the chain
+9.some changes in nodes(add one, delete one, split one, combining into one) are written through
+
+data cache
+1.cache is stored in hash (order is key)
+2.there is a key for position in each table
+3.entries whith most active central keys are stored in cache
+4.central keys are stored in heap & hash

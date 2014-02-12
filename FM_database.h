@@ -39,8 +39,8 @@ class entry
 {
 	public:
 
-	index_t index;
-	index_t order;
+	index_t index; // order
+	index_t pos;
 	std::string value;
 	std::vector<std::string> keys;
 };
@@ -132,7 +132,7 @@ class table
  * on disk everything is a string
  * new_db creates a new data base with a meta & a data file
  * new_db returns a handler>=0 if success ,-1 if fail
- * index ( in fact is position ) is the only key to identify an entry
+ * index (TODO it is better to be position , but there would be problem in cache )(in fact is the order it is added) is the only key to identify an entry
  * add_key will add a key to the data specified by handler, if success, a key handler will
  * be returned, a meta & an index file will be created
  * a B tree will be created for each key, and stored in index file
