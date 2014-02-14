@@ -4,6 +4,9 @@
 #include<vector>
 #include<fstream>
 
+namespace FM_datatbase
+{
+
 #define index_t long long
 
 class db_meta
@@ -27,9 +30,10 @@ class table_meta
 	public:
 
 	index_t entry_len;
-	index_t entry_sum;
+	index_t entry_num;
 	index_t free_head;
-	index_t key_sum;
+	index_t key_num;
+	index_t central_key;
 	std::vector<index_t> key_len;
 	index_t max_order;
 
@@ -60,9 +64,12 @@ class hash
 
 	public:
 
-	hash();
+	hash( index_t size );
+	hash(){}
 	void add( key_t key , value_t value );
 	void del( key_t key );
+	bool find( key_t key );
+	index_t count();
 	value_t& operator[]( key_t key );
 
 	private:
@@ -87,6 +94,7 @@ class hash
 	std::vector<hash_table_entry> table;
 
 	index_t prime_0;
+	index_t count;
 
 };
 
@@ -115,10 +123,12 @@ class table
 {
 	public:
 
-	std::fstream dataio;
-	std::vector<std::fstream*> keyios;
+	table(){}
 
-	std::vector<cache_entry> cache;
+	std::fstream dataio;
+	std::vector< std::fstream* > keyios;
+
+	hash<index_t,cache_entry> cache;
 	std::vector<heap_entry> heap; 
 	hash<std::string,index_t> hash_0; // key , pos
 
@@ -164,7 +174,7 @@ class database
 
 	index_t add_key( index_t handler , index_t len , bool central );
 	void get_index( index_t handler , index_t key_handler , std::string key );
-	index_t search();
+	index_t search( index_t handler );
 	
 	private:
 
@@ -176,17 +186,19 @@ class database
 
 	/* heap */
 
+		void swap_heap_entry( index_t handler , index_t i , index_t j );
 		void heap_up( index_t handler , index_t pos );
 		void heap_down( index_t handler , index_t pos );
-		void heap_add( index_t handler , index_t pos );
+		void heap_add( index_t handler , std::string key , index_t count_0 );
 		void heap_del( index_t handler , index_t pos );
 		void heap_inc( index_t handler , std::string key , index_t delta );
-		void heap_min();
+		string heap_min( index_t handler );
 
 	/* constant */
 
 	std::string init_file_name="database.ini";
 	std::string store_directory="database/";
+	const index_t max_name_len=100;
 	db_meta db_meta_0;
 
 	/* variable */
@@ -197,21 +209,7 @@ class database
 };
 
 
+
+};
+
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
