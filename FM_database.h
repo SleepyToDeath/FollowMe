@@ -9,6 +9,9 @@ namespace FM_datatbase
 
 #define index_t long long
 
+const index_t default_cache_size = 10000000;
+const index_t default_cache_capacity = 5000000;
+
 class db_meta
 {
 	public:
@@ -19,11 +22,15 @@ class db_meta
 
 };
 
-class key_meta
+class key
 {
 	public:
 
+	std::string key;
+	index_t index;
 };
+
+bool operator > ( key a , key b );
 
 class table_meta 
 {
@@ -49,14 +56,6 @@ class entry
 	std::vector<std::string> keys;
 };
 
-class key
-{
-	public:
-
-	index_t index;
-	index_t order;
-	std::string value;
-};
 
 template<class key_t , class value_t>
 class hash
@@ -180,9 +179,12 @@ class database
 
 	/* helper functions */
 
-	std::string get_key( index_t handler , index_t key_handler , index_t index );
-	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , std::string value );
-
+	/* TODO build a tree */
+//	std::string get_key( index_t handler , index_t key_handler , index_t index );
+//	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , std::string value );
+	
+	/* TODO */
+	index_t write_data( index_t handler , entry entry_0 ); // return position
 
 	/* heap */
 
@@ -192,7 +194,7 @@ class database
 		void heap_add( index_t handler , std::string key , index_t count_0 );
 		void heap_del( index_t handler , index_t pos );
 		void heap_inc( index_t handler , std::string key , index_t delta );
-		string heap_min( index_t handler );
+		std::string heap_min( index_t handler );
 
 	/* constant */
 
@@ -208,6 +210,50 @@ class database
 
 };
 
+class Btree
+{
+	public:
+	class carrier
+	{
+		public:
+		carrier( index_t pos_0 , index_t rank_0 , std::string key_0 , index_t index_0 );
+		
+		private:
+		index_t pos;
+		index_t rank;
+		std::string key;
+		index_t index;
+	};
+
+	Btree( std::string index , index_t cache_size = default_cache_size , index_t cache_capacity = default_cache_capacity );
+	void add( std::string key , index_t index );
+	void del( std::string key );
+	void modify( key_t key , index new_value );
+
+	private:
+
+	class node
+	{
+		public:
+
+		index_t key_num;
+		index_t parent;
+		index_t next;
+		vector<key> keys;
+		vector<index_t> sons; // <position>
+
+	};
+
+	node& accessor( index_t pos );
+
+	index_t cache_capacity;
+	index_t cache_size;
+
+	hash<index_t, node> cache; // <position,node>
+
+
+
+};
 
 
 };

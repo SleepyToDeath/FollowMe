@@ -8,11 +8,25 @@ using std::stringstream;
 using std::fstream;
 using std::ios;
 
-string itos(index_t i)
+string itos( index_t i )
 {
 	stringstream ss;
 	ss<<i;
 	return ss.str();
+}
+
+string iexts( index_t i )
+{
+	int l = sizeof( index_t );
+	string tmp="";
+	for (int j=0; j<l; j++)
+		tmp+=(char)(i>>(j*8));
+	return tmp;
+}
+
+bool operator > ( key a , key b )
+{
+	return ( a.key > b.key || a.key == b.key && a.index > b.index );
 }
 
 database::database()
@@ -78,15 +92,21 @@ index_t database::add( index_t handler , char* value , std::vector<std::string> 
 	}
 	table_0->cache.add( tmp.index , tmp_2 );
 
-	if ( table_0->cache.count() >= cache_capacity )
+	if ( table_0->cache.count() >= db_meta_0.cache_capacity )
 	{
-		index i = table_0->hash_0[ heap_min( handler ) ];
+		index_t i = table_0->hash_0[ heap_min( handler ) ];
 		while ( i >= 0 )
 		{
-			
+			tmp_2 = table_0->cache[i];
+			index_t tmp_i = write_data( handler , tmp_2.entry_0 );
+			/* TODO change pos in index key tree */
 
-
-	
+			table_0->cache.del( i );
+			i = tmp_2.next;
+		}
+		table_0->hash_0.del( heap_min( handler ) );
+		heap_del( handler , 1 );
+	}
 
 }
 
@@ -284,4 +304,5 @@ index_t hash<key_t,value_t>::h( key_t key , index_t i )
 	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
 }
 
+Btree::carrier::carrier
 
