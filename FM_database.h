@@ -11,6 +11,10 @@ namespace FM_datatbase
 
 const index_t default_cache_size = 10000000;
 const index_t default_cache_capacity = 5000000;
+std::string store_directory="database/";
+
+std::string itos( index_t i );
+std::string iexts( index_t i );
 
 class db_meta
 {
@@ -19,6 +23,12 @@ class db_meta
 	index_t cache_size;
 	index_t cache_capacity;
 	index_t block_size;
+
+};
+
+class key_meta
+{
+	public:
 
 };
 
@@ -93,7 +103,7 @@ class hash
 	std::vector<hash_table_entry> table;
 
 	index_t prime_0;
-	index_t count;
+	index_t counter;
 
 };
 
@@ -199,7 +209,6 @@ class database
 	/* constant */
 
 	std::string init_file_name="database.ini";
-	std::string store_directory="database/";
 	const index_t max_name_len=100;
 	db_meta db_meta_0;
 
@@ -210,13 +219,16 @@ class database
 
 };
 
+/* a simple B-tree...... with a cache  */
 class Btree
 {
 	public:
+
 	class carrier
 	{
 		public:
 		carrier( index_t pos_0 , index_t rank_0 , std::string key_0 , index_t index_0 );
+		index_t next(); //return index
 		
 		private:
 		index_t pos;
@@ -228,7 +240,8 @@ class Btree
 	Btree( std::string index , index_t cache_size = default_cache_size , index_t cache_capacity = default_cache_capacity );
 	void add( std::string key , index_t index );
 	void del( std::string key );
-	void modify( key_t key , index new_value );
+	void modify( key_t key , index_t new_value );
+	carrier* search( string key_1 , string key_2="" , index_t index_0=-1 );
 
 	private:
 
@@ -239,8 +252,8 @@ class Btree
 		index_t key_num;
 		index_t parent;
 		index_t next;
-		vector<key> keys;
-		vector<index_t> sons; // <position>
+		std::vector<key> keys;
+		std::vector<index_t> sons; // <position>
 
 	};
 
@@ -248,10 +261,9 @@ class Btree
 
 	index_t cache_capacity;
 	index_t cache_size;
+	index_t node_size;
 
 	hash<index_t, node> cache; // <position,node>
-
-
 
 };
 
@@ -259,3 +271,4 @@ class Btree
 };
 
 #endif
+

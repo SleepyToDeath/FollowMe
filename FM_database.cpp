@@ -211,7 +211,7 @@ hash<key_t,value_t>::hash( index_t size )
 			break;
 		}
 	table=vector<hash_table_entry>( hash_table_entry() , size+1 );
-	count=0;
+	counter=0;
 
 }
 
@@ -227,7 +227,7 @@ void hash<key_t,value_t>::add( key_t key , value_t value )
 			table[hash_value].valid=true;
 			table[hash_value].key=key;
 			table[hash_value].value=value;
-			count--;
+			counter--;
 			break;
 		}
 	}
@@ -243,7 +243,7 @@ void hash<key_t,value_t>::del( key_t key )
 		if (table[hash_value].used && table[hash_value].valid && table[hash_value].key==key)
 		{
 			table[hash_value].valid=false;
-			count--;
+			counter--;
 		}
 	}
 }
@@ -276,7 +276,7 @@ bool hash<key_t,value_t>::find(key_t key)
 template<class key_t, class value_t>
 index_t hash<key_t,value_t>::count()
 {
-	return count;
+	return counter;
 }
 
 template<class key_t, class value_t>
@@ -304,5 +304,9 @@ index_t hash<key_t,value_t>::h( key_t key , index_t i )
 	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
 }
 
-Btree::carrier::carrier
+Btree::carrier::carrier( index_t pos_0 , index_t rank_0 , std::string key_0 , index_t index_0 )
+:pos(pos_0),rank(rank_0),key(key_0),index(index_0)
+{
+}
 
+Btree::Btree(
