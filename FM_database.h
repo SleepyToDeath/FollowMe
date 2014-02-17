@@ -30,17 +30,17 @@ class key_meta
 {
 	public:
 
+	std::string index;
+	index_t cache_capacity;
+	index_t cache_size;
+	index_t node_size;
+	index_t key_size;
+	index_t max_pos;
+	index_t free_head;
+	index_t root;
+	index_t height;
+
 };
-
-class key
-{
-	public:
-
-	std::string key;
-	index_t index;
-};
-
-bool operator > ( key a , key b );
 
 class table_meta 
 {
@@ -55,6 +55,17 @@ class table_meta
 	index_t max_order;
 
 };
+
+
+class key
+{
+	public:
+
+	std::string key;
+	index_t index;
+};
+
+bool operator > ( key a , key b );
 
 class entry
 {
@@ -135,7 +146,7 @@ class table
 	table(){}
 
 	std::fstream dataio;
-	std::vector< std::fstream* > keyios;
+//	std::vector< std::fstream* > keyios;
 
 	hash<index_t,cache_entry> cache;
 	std::vector<heap_entry> heap; 
@@ -219,29 +230,37 @@ class database
 
 };
 
-/* a simple B-tree...... with a cache  */
+/* a simple B-tree...... with a cache
+ * elements are ranked in rising order
+ * keys with bigger indices , which means they appear latter , are arranged first
+ */
 class Btree
 {
+	friend class carrier;
+
 	public:
 
 	class carrier
 	{
 		public:
-		carrier( index_t pos_0 , index_t rank_0 , std::string key_0 , index_t index_0 );
-		index_t next(); //return index
+		carrier( index_t pos_0 , index_t rank_0 , std::string key_1_0 , std::string key_2_0 , index_t index_0 );
+		index_t next(); // return next matching index
 		
 		private:
 		index_t pos;
 		index_t rank;
-		std::string key;
+		std::string key_1 , key_2;
 		index_t index;
 	};
 
-	Btree( std::string index , index_t cache_size = default_cache_size , index_t cache_capacity = default_cache_capacity );
+	Btree( std::string index_0 , index_t cache_size_0 = default_cache_size , index_t cache_capacity_0 = default_cache_capacity , index_t node_size_0 = default_node_size , index_t key_size_0 = 0 );
+	Btree( std::string index_0 ); // read from meta file
 	void add( std::string key , index_t index );
 	void del( std::string key );
 	void modify( key_t key , index_t new_value );
-	carrier* search( string key_1 , string key_2="" , index_t index_0=-1 );
+	carrier* search( std::string key_1 , std::string key_2 );	//return all indices in the range 
+	index_t search( std::string key );	//return the first one matching the given key
+	index_t search( std::string key , index_t index );	//return the exact one matching the given info
 
 	private:
 
@@ -249,21 +268,30 @@ class Btree
 	{
 		public:
 
+		index_t find( key key_0 ); // find the last one <= key_0
+
 		index_t key_num;
 		index_t parent;
-		index_t next;
+//		index_t next;
 		std::vector<key> keys;
-		std::vector<index_t> sons; // <position>
+		std::vector<index_t> sons; // <position> ; sons[i] is the subtree before keys[i]
 
 	};
 
 	node& accessor( index_t pos );
+	index_t new_node();
+	void write_node( index_t pos , node n );
+	node read_node( index_t pos );
 
-	index_t cache_capacity;
-	index_t cache_size;
-	index_t node_size;
+	/* variable */
+	key_meta meta;
 
 	hash<index_t, node> cache; // <position,node>
+
+	std::fstream fio;
+
+	/* constant */
+	const static index_t default_node_size = 512;
 
 };
 

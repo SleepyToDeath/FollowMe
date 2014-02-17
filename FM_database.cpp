@@ -8,6 +8,18 @@ using std::stringstream;
 using std::fstream;
 using std::ios;
 
+index_t atoi( string s )
+{
+	int l=s.length();
+	index_t i=0;
+	int j=0;
+	while ( s[j]==' ' || s[j]=='\t' )
+		j++;
+	for (;j<l;j++)
+		i=i*10+s[j]-'0';
+	return i;
+}
+
 string itos( index_t i )
 {
 	stringstream ss;
@@ -26,28 +38,30 @@ string iexts( index_t i )
 
 bool operator > ( key a , key b )
 {
-	return ( a.key > b.key || a.key == b.key && a.index > b.index );
+	return ( a.key > b.key || a.key == b.key && a.index < b.index );
 }
 
 database::database()
 {
 	fstream fin(init_file_name);
 	string s;
-	getline(fin,s);
-	if (s.find("cache_size")) 
+	while (getline(fin,s))
 	{
-		size_t pos=s.find("=");
-		db_meta_0.cache_size=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
-	}
-	else if (s.find("cache_capacity")) 
-	{
-		size_t pos=s.find("=");
-		db_meta_0.cache_capacity=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
-	}
-	else if (s.find("block_size")) 
-	{
-		size_t pos=s.find("=");
-		db_meta_0.block_size=atoi(s.substr(pos+1,s.length()-pos-1).c_str());
+		if (s.find("cache_size")) 
+		{
+			size_t pos=s.find("=");
+			db_meta_0.cache_size=atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("cache_capacity")) 
+		{
+			size_t pos=s.find("=");
+			db_meta_0.cache_capacity=atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("block_size")) 
+		{
+			size_t pos=s.find("=");
+			db_meta_0.block_size=atoi(s.substr(pos+1,s.length()-pos-1));
+		}
 	}
 
 }
@@ -73,7 +87,7 @@ index_t database::add( index_t handler , char* value , std::vector<std::string> 
 	tmp.value = string( value );
 	tmp.index = table_0->table_meta_0.max_order;
 	table_0->table_meta_0.max_order++;
-	tmp.keys.push_back( tmp.index );
+	tmp.keys.push_back( iexts(tmp.index) );
 
 	cache_entry tmp_2;
 	tmp_2.entry_0 = tmp;
@@ -189,7 +203,7 @@ void database::heap_inc( index_t handler , string key , index_t delta )
 
 string database::heap_min( index_t handler )
 {
-	return tables[ handler ]->heap[1];
+	return tables[ handler ]->heap[1].key;
 }
 
 /* hash */
@@ -301,12 +315,170 @@ template<class key_t , class value_t>
 index_t hash<key_t,value_t>::h( key_t key , index_t i )
 {
 	index_t key_1=h0(key);
-	return (key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
+	return ( key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
 }
 
-Btree::carrier::carrier( index_t pos_0 , index_t rank_0 , std::string key_0 , index_t index_0 )
-:pos(pos_0),rank(rank_0),key(key_0),index(index_0)
+Btree::carrier::carrier( index_t pos_0 , index_t rank_0 , std::string key_1_0 , std::string key_2_0 , index_t index_0 )
+:pos(pos_0),rank(rank_0),key_1(key_1_0),key_2(key_2_0),index(index_0)
 {
 }
 
-Btree::Btree(
+index_t Btree::node::find( key key_0 )
+{
+	int i=0, j=key_num-1;
+	while ( i<j )
+	{
+		k = (i+j)/2;
+		if ( key_0 > keys[k] )
+			i = k+1;
+		else
+			j = k;
+	}
+	return i-1;
+}
+
+Btree::Btree( std::string index_0 , index_t cache_size_0 , index_t cache_capacity_0 , index_t node_size_0 , index_t key_size_0 )
+{
+	meta.index = index_0;
+	meta.cache_size = cache_size_0;
+	meta.cache_capacity = cache_capacity_0;
+	meta.node_size = node_size_0;
+	meta.key_size = key_size_0;
+	meta.root = -1;
+	meta.max_pos = -1;
+	meta.free_head = -1;
+	meta.height = -1;
+	meta.node_size = node_size/meta.key_size;
+	cache = hash<index_t, node>( meta.cache_size );
+}
+
+Btree::Btree( std::string index_0 )
+{
+	fstream fin((index+".meta").c_str());
+	string s;
+	while ( getline(fin,s) )
+	{
+		if (s.find("cache_size")) 
+		{
+			size_t pos = s.find("=");
+			meta.cache_size = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("cache_capacity")) 
+		{
+			size_t pos = s.find("=");
+			meta.cache_capacity = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("key_size")) 
+		{
+			size_t pos = s.find("=");
+			meta.key_size = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("node_size")) 
+		{
+			size_t pos = s.find("=");
+			meta.node_size = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("root")) 
+		{
+			size_t pos = s.find("=");
+			meta.root = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("max_pos")) 
+		{
+			size_t pos = s.find("=");
+			meta.max_pos = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("free_head")) 
+		{
+			size_t pos = s.find("=");
+			meta.free_head = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+		else if (s.find("heght")) 
+		{
+			size_t pos = s.find("=");
+			meta.height = atoi(s.substr(pos+1,s.length()-pos-1));
+		}
+	}
+
+	meta.node_size = node_size/meta.key_size;
+	cache = hash<index_t, node>( meta.cache_size );
+}
+
+void Btree::add( string key_0 , index_t index_0 )
+{
+	key tmp;
+	tmp.key = key;
+	tmp.index = index_0;
+
+	if ( root == -1 )
+	{
+		root = new_node();	
+		height = 0;
+	}
+	index_t cur = root;
+	for (int i=0; i<meta.height; i++)
+	{
+		node& tmpn = accessor( cur );
+		int tmpi = tmpn.find( tmp );
+		if ( tmpi>=0 && tmpn.keys[tmpi]==key_0 ) return;
+		cur = tmpn.sons[tmpi+1];
+	}
+
+	node& tmpn = accessor( cur );
+	int tmpi = tmpn.find( tmp );
+	if ( tmpi>=0 && tmpn.keys[tmpi]==key_0 ) return;
+	index_t new_son = -1;
+	while ( cur>=0 )
+	{
+		node& tmpn = accessor( cur );
+		int tmpi = tmpn.find( tmp );
+		for (int i=tmpn.key_num-1; i>tmpi; i--)
+		{
+			tmpn.keys[i+1] = tmpn.keys[i];
+			tmpn.sons[i+2] = tmpn.sons[i+1];
+		}
+		tmpn.keys[tmpi+1] = tmp;
+		tmpn.sons[tmpi+2] = new_son;
+		if ( tmpn.key_num < meta.key_size-1 ) break;
+		tmpi = tmpn.key_num / 2;
+		new_son = new_node();
+		node& tmpn2 = accessor( new_son );
+		for (int i=tmpi+1; i< tmpn.key_num; i++)
+		{
+			tmpn2.keys[i-tmpi-1] = tmpn.keys[i];
+			tmpn2.sons[i-tmpi-1] = tmpn.sons[i];
+		}
+		tmpn2.sons[tmpn.key_num-tmpi] = tmpn.sons[tmpn.key_num];
+		tmp = tmpn.keys[tmpi];
+		tmpn.key_num = tmpi;
+		tmpn2.key_num = key_num-tmpi-1;
+		tmpn2.parent = tmpn.parent;
+		cur = tmpn.parent;
+	}
+	if ( cur == -1 )
+	{
+		index_t tmpi = new_node();
+		node& tmpn = accessor( tmpi );
+		tmpn.keys[0] = tmp;
+		tmpn.sons[0] = root;
+		tmpn.sons[1] = new_son;
+		accessor( root ).parent = tmpi;
+		root = tmpi;
+	}
+		
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
