@@ -256,7 +256,7 @@ class Btree
 	Btree( std::string index_0 , index_t cache_size_0 = default_cache_size , index_t cache_capacity_0 = default_cache_capacity , index_t node_size_0 = default_node_size , index_t key_size_0 = 0 );
 	Btree( std::string index_0 ); // read from meta file
 	void add( std::string key , index_t index );
-	void del( std::string key );
+	void del( std::string key , index_t index );
 	void modify( key_t key , index_t new_value );
 	carrier* search( std::string key_1 , std::string key_2 );	//return all indices in the range 
 	index_t search( std::string key );	//return the first one matching the given key

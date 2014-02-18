@@ -8,6 +8,12 @@ using std::stringstream;
 using std::fstream;
 using std::ios;
 
+index_t max( index_t a , index_t b )
+{
+	if ( a > b ) return a;
+	else return b;
+}
+
 index_t atoi( string s )
 {
 	int l=s.length();
@@ -348,7 +354,7 @@ Btree::Btree( std::string index_0 , index_t cache_size_0 , index_t cache_capacit
 	meta.max_pos = -1;
 	meta.free_head = -1;
 	meta.height = -1;
-	meta.node_size = node_size/meta.key_size;
+	meta.node_size = node_size/(meta.key_size+sizeof(index_t)*2);
 	cache = hash<index_t, node>( meta.cache_size );
 }
 
@@ -400,7 +406,7 @@ Btree::Btree( std::string index_0 )
 		}
 	}
 
-	meta.node_size = node_size/meta.key_size;
+	meta.node_size = node_size/(meta.key_size+sizeof(index_t)*2);
 	cache = hash<index_t, node>( meta.cache_size );
 }
 
@@ -468,7 +474,105 @@ void Btree::add( string key_0 , index_t index_0 )
 		
 }
 
+void Btree::del( string key_0 , index_t index_0 )
+{
+	key tmp;
+	tmp.key = key_0;
+	tmp.index = index_0;
+	index_t cur = root;
+	int tmpi = -1;
+	while ( cur>=0 )
+	{
+		node& tmpn = accessor( cur );
+		tmpi = tmpn.find( tmp );
+		if ( tmpn.keys[tmpi] == tmp ) break;
+		cur = tmpn.sons[tmpi+1];
+	}
+	// now cur & tmpi is what I need
+	if ( cur == -1 ) return;
+	node& tmpn = accessor( cur );
+	if ( tmpn.sons[tmpi+1] == -1 )
+	{
+		for (int i=tmpi; i<tmpn.key_num-1; i++)
+			tmpn.keys[i] = tmpn.keys[i+1];
+		tmpn.key_num--;
+	}
+	else
+	{
+		index_t tmpi2 = tmpn.sons[tmpi];
+		index_t tmpi3;
+		while ( tmpi2>=0 )
+		{
+			tmpi3 = tmpi2;
+			node& tmpn2 = accessor( tmpi2 );
+			tmpi2 = tmpn2.sons[tmpn2.key_num-1];
+		}
+		node& tmpn2 = accessor( tmpi2 );
+		tmpn.keys[tmpi] = tmpn2.keys[tmpn2.key_num-1];
+		tmpn2.key_num--;
+		cur = tmpi2;
+	}
 
+	//now adjust cur
+	if ( cur == root || accessor( cur ).key_num >= (meta.node_size+1)/2-1 ) return;
+	index_t tmpib;
+	node& tmpn = accessor( cur );
+	node& tmpnp = accessor( tmpn.parent );
+	tmpi = tmpn.find( tmpn.keys[0] );
+	if ( tmpi == -1 )
+		tmpib = tmpnp.sons[1];
+	else
+		tmpib = tmpnp.sons[tmpi]
+	node& tmpnb = accessor( tmpib );
+	if ( tmpnb.key_num > (meta.node_size+1)/2-1 )
+	{
+		if ( tmpi >= 0 )
+		{
+			for (int i=tmpn.key_num; i>0; i--)
+			{
+				tmpn.keys[i]=tmpn.keys[i-1];
+				tmpn.sons[i+1]=tmpn.sons[i];
+			}
+			tmpn.sons[1] = tmpn.sons[0];
+			tmpn.keys[0] = tmpnp.keys[ tmpi ];
+			tmpn.sons[0] = tmpnb.sons[ tmpnb.key_num ];
+			tmpnp.keys[ tmpi ] = tmpnb.keys[ tmpnb.key_num-1 ];
+			tmpnb.key_num--;
+			tmpn.key_num++;
+		}
+		else
+		{
+			tmpn.keys[ tmpn.key_num ] = tmpnp.keys[0];
+			tmpn.sons[ tmpn.key_num+1 ] = tmpnb.sons[0];
+			tmpnp.keys[0] = tmpnb.keys[0];
+			for (int i=0; i<tmpnb.key_num-1; i++)
+			{
+				tmpnb.keys[i]=tmpnb[i+1];
+				tmpnb.sons[i]=tmpnb[i+1];
+			}
+			tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
+			tmpn.key_num++;
+			tmpnb.key_num++;
+		}
+	}
+	else
+	{
+		// TODO combination
+		
+		while (true)
+		{
+
+
+		}
+	}
+
+
+
+
+
+
+
+}
 
 
 
