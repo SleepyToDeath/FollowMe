@@ -4,6 +4,7 @@
 using namespace FM_datatbase;
 using std::string;
 using std::vector;
+using std::pair;
 using std::stringstream;
 using std::fstream;
 using std::ios;
@@ -40,6 +41,21 @@ string iexts( index_t i )
 	for (int j=0; j<l; j++)
 		tmp+=(char)(i>>(j*8));
 	return tmp;
+}
+
+void put_int( fstream& fio , index_t i )
+{
+	string s = iexts( i );
+	for (int i=0; i<sizeof(index_t); i++)
+		fio.put( s[i] );
+}
+
+index_t get_int( fstream& fio )
+{
+	string s = "";
+	for (int i=0; i<sizeof(index_t); i++)
+		s+=fio.get();
+	return atoi( s );
 }
 
 bool operator > ( key a , key b )
@@ -355,7 +371,10 @@ Btree::Btree( std::string index_0 , index_t cache_size_0 , index_t cache_capacit
 	meta.free_head = -1;
 	meta.height = -1;
 	meta.node_size = node_size/(meta.key_size+sizeof(index_t)*2);
+	meta.node_size = max( meta.node_size , 3 );
+	node_size_byte = node_size*meta.key_size+(node_size*2+3)*sizeof(index_t);
 	cache = hash<index_t, node>( meta.cache_size );
+	fstream fin( (index+".dat").c_str() , ios::binary | ios::in | ios::out );
 }
 
 Btree::Btree( std::string index_0 )
@@ -406,8 +425,10 @@ Btree::Btree( std::string index_0 )
 		}
 	}
 
-	meta.node_size = node_size/(meta.key_size+sizeof(index_t)*2);
+	node_size_byte = node_size*meta.key_size+(node_size*2+3)*sizeof(index_t);
 	cache = hash<index_t, node>( meta.cache_size );
+	fin.close();
+	fstream fin( (index+".dat").c_str() , ios::binary | ios::in | ios::out );
 }
 
 void Btree::add( string key_0 , index_t index_0 )
@@ -415,6 +436,10 @@ void Btree::add( string key_0 , index_t index_0 )
 	key tmp;
 	tmp.key = key;
 	tmp.index = index_0;
+	// make sure every key is of length key_size
+	int l = tmp.key.length();
+	for (int i=l; i<meta.key_size; i++)
+		tmp.key+=" ";
 
 	if ( root == -1 )
 	{
@@ -474,6 +499,7 @@ void Btree::add( string key_0 , index_t index_0 )
 		
 }
 
+/* possible problem: empty son not set to -1 */
 void Btree::del( string key_0 , index_t index_0 )
 {
 	key tmp;
@@ -514,64 +540,268 @@ void Btree::del( string key_0 , index_t index_0 )
 	}
 
 	//now adjust cur
-	if ( cur == root || accessor( cur ).key_num >= (meta.node_size+1)/2-1 ) return;
-	index_t tmpib;
-	node& tmpn = accessor( cur );
-	node& tmpnp = accessor( tmpn.parent );
-	tmpi = tmpn.find( tmpn.keys[0] );
-	if ( tmpi == -1 )
-		tmpib = tmpnp.sons[1];
-	else
-		tmpib = tmpnp.sons[tmpi]
-	node& tmpnb = accessor( tmpib );
-	if ( tmpnb.key_num > (meta.node_size+1)/2-1 )
+	while ( cur != root && accessor( cur ).key_num < (meta.node_size+1)/2-1 )
 	{
-		if ( tmpi >= 0 )
+		index_t tmpib;
+		node& tmpn = accessor( cur );
+		node& tmpnp = accessor( tmpn.parent );
+		tmpi = tmpn.find( tmpn.keys[0] );
+		if ( tmpi == -1 )
+			tmpib = tmpnp.sons[1];
+		else
+			tmpib = tmpnp.sons[tmpi]
+		node& tmpnb = accessor( tmpib );
+		if ( tmpnb.key_num > (meta.node_size+1)/2-1 )
 		{
-			for (int i=tmpn.key_num; i>0; i--)
+			if ( tmpi >= 0 )
 			{
-				tmpn.keys[i]=tmpn.keys[i-1];
-				tmpn.sons[i+1]=tmpn.sons[i];
+				for (int i=tmpn.key_num; i>0; i--)
+				{
+					tmpn.keys[i]=tmpn.keys[i-1];
+					tmpn.sons[i+1]=tmpn.sons[i];
+				}
+				tmpn.sons[1] = tmpn.sons[0];
+				tmpn.keys[0] = tmpnp.keys[ tmpi ];
+				tmpn.sons[0] = tmpnb.sons[ tmpnb.key_num ];
+				tmpnp.keys[ tmpi ] = tmpnb.keys[ tmpnb.key_num-1 ];
+				tmpnb.key_num--;
+				tmpn.key_num++;
 			}
-			tmpn.sons[1] = tmpn.sons[0];
-			tmpn.keys[0] = tmpnp.keys[ tmpi ];
-			tmpn.sons[0] = tmpnb.sons[ tmpnb.key_num ];
-			tmpnp.keys[ tmpi ] = tmpnb.keys[ tmpnb.key_num-1 ];
-			tmpnb.key_num--;
-			tmpn.key_num++;
+			else
+			{
+				tmpn.keys[ tmpn.key_num ] = tmpnp.keys[0];
+				tmpn.sons[ tmpn.key_num+1 ] = tmpnb.sons[0];
+				tmpnp.keys[0] = tmpnb.keys[0];
+				for (int i=0; i<tmpnb.key_num-1; i++)
+				{
+					tmpnb.keys[i]=tmpnb[i+1];
+					tmpnb.sons[i]=tmpnb[i+1];
+				}
+				tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
+				tmpn.key_num++;
+				tmpnb.key_num++;
+			}
 		}
 		else
 		{
-			tmpn.keys[ tmpn.key_num ] = tmpnp.keys[0];
-			tmpn.sons[ tmpn.key_num+1 ] = tmpnb.sons[0];
-			tmpnp.keys[0] = tmpnb.keys[0];
-			for (int i=0; i<tmpnb.key_num-1; i++)
+			
+			if ( tmpi==-1 )
 			{
-				tmpnb.keys[i]=tmpnb[i+1];
-				tmpnb.sons[i]=tmpnb[i+1];
+				tmpn.keys[ tmpn.key_num ] = tmpnp.keys[ 0 ];
+				for (int i=0; i<tmpnb.key_num; i++)
+				 {
+					 tmpn.keys[ i+tmpn.key_num+1 ] = tmpnb.keys[i];
+					 tmpn.sons[ i+tmpn.key_num+1 ] = tmpnb.keys[i];
+				 }
+				 tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] = tmpnb.sons[ tmpnb.key_num ];
+				 tmpn.key_num = tmpn.key_num+tmpnb.key_num+1;
+				 for (int i=0; i<tmpnp.key_num-1; i++)
+				 {
+					 tmpnp.keys[i] = tmpnp.keys[i+1];
+					 tmpnp.sons[i+1] = tmpnp.sons[i+2];
+				 }
+				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ];
+				 tmpnp.key_num--;
+				 del_node( tmpib );
+				 cur = tmpn.parent;
 			}
-			tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
-			tmpn.key_num++;
-			tmpnb.key_num++;
+			else
+			{
+				tmpnb.keys[ tmpnb.key_num ] = tmpnp.keys[ tmpi ];
+				for (int i=0; i<tmpn.key_num; i++)
+				 {
+					 tmpnb.keys[ i+tmpnb.key_num+1 ] = tmpn.keys[i];
+					 tmpnb.sons[ i+tmpnb.key_num+1 ] = tmpn.keys[i];
+				 }
+				// TODO
+				 tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] = tmpn.sons[ tmpn.key_num ];
+				 tmpnb.key_num = tmpn.key_num+tmpnb.key_num+1;
+				 for (int i=tmpi; i<tmpnp.key_num-1; i++)
+				 {
+					 tmpnp.keys[i] = tmpnp.keys[i+1];
+					 tmpnp.sons[i+1] = tmpnp.sons[i+2];
+				 }
+				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ];
+				 tmpnp.key_num--;
+				 del_node( cur );
+				 cur = tmpnb.parent;
+			}
 		}
 	}
-	else
+
+	node& tmpn = accessor( cur );
+	if ( cur == root && tmpn.key_num == 0 )
 	{
-		// TODO combination
-		
-		while (true)
-		{
-
-
-		}
+		root = tmpn.sons[0];
+		meta.height++;
 	}
+}
 
+void Btree::modify( string key_0 , index_t new_value )
+{
+	pair<index_t,index_t> tmp = inner_search( key_0 );
+	if ( tmp.first == -1 ) return;
+	accessor( tmp.first ).keys[ tmp.second ].index = new_value;
+}
 
+carrier* Btree::search( std::string key_1 , std::string key_2 )
+{
+	pair<index_t,index_t> tmp = inner_search( key_1 );
+	return new carrier(	tmp.first , tmp.second , key_1 , key_2 , accessor( tmp.first ).keys[ tmp.second ] );
+}
 
+index_t Btree::search( std::string key )
+{
+	pair<index_t,index_t> tmp = inner_search( key );
+	if ( tmp.first == -1 ) return -1;
+	return accessor( tmp.first ).keys[ tmp.second ].index;
+}
 
+index_t Btree::search( std::string key , index_t index )
+{
+	index_t cur = root;
+	key tmp;
+	tmp.index = index;
+	tmp.key = key;
+	while ( cur >= 0 )
+	{
+		node& tmpn = accessor( cur );
+		index_t tmpi = tmpn.find( tmp );
+		if ( tmpn.keys[tmpi] == tmp )
+			return pair<index_t,index_t>( cur , tmpi );
+		cur = tmpn.sons[tmpi+1];
+	}
+	return -1;
+}
 
+std::pair<index_t,index_t> Btree::inner_search( std::string key )
+{
+	index_t cur = root;
+	key tmp;
+	tmp.index = -1;
+	tmp.key = key;
+	while ( cur >= 0 )
+	{
+		node& tmpn = accessor( cur );
+		index_t tmpi = tmpn.find( tmp );
+		if ( tmpn.keys[tmpi].key == key )
+			return pair<index_t,index_t>( cur , tmpi );
+		cur = tmpn.sons[tmpi+1];
+	}
+	return pair<index_t,index_t>( -1 , -1 );
+}
 
+node& Btree::accessor( index_t pos )
+{
+	// read from data file
+	if ( !cache.find( pos ) )
+	{
+		node tmp = read_node( pos )
+		tmp.prev = -1;
+		tmp.next = -1;
+		cache.add( pos , tmp );
+	}
+	// update rank in cache
+	if ( cache[pos].next >= 0 )
+		cache[cache[pos].next].prev = cache[pos].prev;
+	if ( cache[pos].prev >= 0 )
+		cache[cache[pos].prev].next = cache[pos].next;
+	if ( pos == cache_head )
+		cache_head = cache[pos].next;
+	if ( cache_head == -1 )
+		cache_head = pos;
+	cache[pos].prev = cache_tail;
+	cache[pos].next = -1;
+	if ( cache_tail >= 0 )
+		cache[ cache_tail ].next = pos;
+	cache_tail = pos;
+	// eliminate oldest one
+	if ( cache.count() > meta.cache_capacity )
+	{
+		index_t tmpi = cache_head;
+		cache_head = cache[ cache_head ].next;
+		write_node( tmpi , cache[ tmpi ] );
+		cache.del( tmpi );
+		cache[ cache_head ].prev = -1;
+	}
+		
+	return cache[pos];
+}
 
+index_t Btree::new_node()
+{
+	node tmp;
+	tmp.prev = -1;
+	tmp.next = -1;	
+	tmp.key_num = 0;
+	tmp.parent = -1;
+	key tmpk;
+	tmpk.index = -1;
+	tmpk.key = "";
+	tmp.keys = vector<key>( meta.node_size+2 , tmpk );
+	tmp.sons = vector<index_t>( meta.node_size+2 , -1 );
+	if ( meta.free_head >= 0 )
+	{
+		index_t tmpi = meta.free_head;
+		fio.seekg( meta.free_head );
+		meta.free_head = get_int( fio );
+		write_node( tmpi , tmp );
+		return tmpi;
+	}
+	write_node( meta.max_pos , tmp );
+	max_pos += node_size_byte;
+	return max_pos - node_size_byte;
+}
+
+void Btree::del_node( index_t pos )
+{
+	if ( cache.find( pos )
+	{
+		if ( cache[pos].prev >= 0 )
+			cache[ cache[pos].prev ].next = cache[pos].next;
+		if ( cache[pos].next >= 0 )
+			cache[ cache[pos].next ].prev = cache[pos].prev;
+		if ( cache_head == pos )
+			cache_head = cache[pos].next;
+		if ( cache_tail == pos )
+			cache_tail = cache[pos].prev;
+	}
+	fio.seekp( pos );
+	put_int( fio , meta.free_head );
+	meta.free_head = pos;
+}
+
+void Btree::write_node( index_t pos , node n )
+{
+	fio.seekp( pos );
+	put_int( fio , n.key_num );
+	put_int( fio , n.parent );
+	for (int i=0; i<meta.node_size; i++)
+	{
+		fio<<n.keys[i].key;
+		put_int( fio , n.keys[i].index );
+	}
+	for (int i=0; i<meta.node_size+1; i++)
+		put_int( fio , n.sons[i] );
+}
+
+node Btree::read_node( index_t pos )
+{
+	fio.seekg( pos );
+	node n;
+	n.key_num = get_int( fio );
+	n.parent = get_int( fio );
+	for (int i=0; i<meta.node_size; i++)
+	{
+		string s = "";
+		for (int i=0; i<meta.key_size(); i++)
+			s+=fio.get();
+		n.keys[i].key = s;
+		n.keys[i].index = get_int( fio );
+	}
+	for (int i=0; i<meta.node_size+1; i++)
+		n.sons[i] = get_int( fio );
+	return n;
 }
 
 

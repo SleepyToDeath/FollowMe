@@ -3,14 +3,16 @@
 
 #include<vector>
 #include<fstream>
+#include<climits>
 
 namespace FM_datatbase
 {
 
 #define index_t long long
+#define MAX_INDEX_T LLONG_MAX
 
-const index_t default_cache_size = 10000000;
-const index_t default_cache_capacity = 5000000;
+const index_t default_cache_size = 100000;
+const index_t default_cache_capacity = 50000;
 std::string store_directory="database/";
 
 std::string itos( index_t i );
@@ -244,20 +246,25 @@ class Btree
 	{
 		public:
 		carrier( index_t pos_0 , index_t rank_0 , std::string key_1_0 , std::string key_2_0 , index_t index_0 );
-		index_t next(); // return next matching index
+		index_t next(); // return next matching index ; -1 if invalid
 		
 		private:
 		index_t pos;
 		index_t rank;
-		std::string key_1 , key_2;
+		std::string key_1 , key_2 , key_0;
 		index_t index;
+		Btree* tree;
 	};
 
 	Btree( std::string index_0 , index_t cache_size_0 = default_cache_size , index_t cache_capacity_0 = default_cache_capacity , index_t node_size_0 = default_node_size , index_t key_size_0 = 0 );
 	Btree( std::string index_0 ); // read from meta file
 	void add( std::string key , index_t index );
 	void del( std::string key , index_t index );
-	void modify( key_t key , index_t new_value );
+	/* modify is a fast way to change a value. BUT , 
+	 * make sure each key has a single corresponding value otherwise the behaviour is undefined
+	 * normally you should use del & add to change a value
+	 */
+	void modify( key_t key , index_t new_value ); 
 	carrier* search( std::string key_1 , std::string key_2 );	//return all indices in the range 
 	index_t search( std::string key );	//return the first one matching the given key
 	index_t search( std::string key , index_t index );	//return the exact one matching the given info
@@ -272,19 +279,24 @@ class Btree
 
 		index_t key_num;
 		index_t parent;
-//		index_t next;
+		index_t next , prev; //not writen to data file
 		std::vector<key> keys;
 		std::vector<index_t> sons; // <position> ; sons[i] is the subtree before keys[i]
 
 	};
 
+	std::pair<index_t,index_t> inner_search( std::string key ); //find the first one matching the given key , return node pos & rank
 	node& accessor( index_t pos );
 	index_t new_node();
+	void del_node( index_t pos );
 	void write_node( index_t pos , node n );
 	node read_node( index_t pos );
 
 	/* variable */
 	key_meta meta;
+
+	index_t cache_head = -1 , cache_tail = -1; // newest is at the tail
+	index_t node_size_byte;
 
 	hash<index_t, node> cache; // <position,node>
 
