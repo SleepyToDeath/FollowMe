@@ -25,6 +25,7 @@ class db_meta
 	index_t cache_size;
 	index_t cache_capacity;
 	index_t block_size;
+	index_t recent_range;
 
 };
 
@@ -48,8 +49,8 @@ class table_meta
 {
 	public:
 
-	index_t entry_len;
-	index_t entry_num;
+	index_t entry_size;
+	index_t max_entry_num; // max_pos/entry_size  
 	index_t free_head;
 	index_t key_num;
 	index_t central_key;
@@ -73,6 +74,7 @@ class entry
 {
 	public:
 
+	char valid;
 	index_t index; // order
 	index_t pos;
 	std::string value;
@@ -125,7 +127,7 @@ class cache_entry
 	public:
 
 	entry entry_0;
-	index_t next;
+	index_t next , prev;
 };
 
 class heap_entry
@@ -140,6 +142,7 @@ class heap_entry
 
 };
 
+class Btree;
 
 class table
 {
@@ -147,15 +150,19 @@ class table
 
 	table(){}
 
-	std::fstream dataio;
+	std::fstream fio;
 //	std::vector< std::fstream* > keyios;
 
 	hash<index_t,cache_entry> cache;
 	std::vector<heap_entry> heap; 
-	hash<std::string,index_t> hash_0; // key , pos
+	hash<std::string,std::pair<index_t,index_t> > hash_0; // key , <pos,head>
+	std::queue<std::string> recent;
 
 	table_meta table_meta_0;
-	std::vector<key_meta> key_metas;
+//	std::vector<key_meta> key_metas;
+	std::vector<Btree> keys;
+
+	bool ready;
 
 };
 
@@ -188,15 +195,15 @@ class database
 /* TODO */
 
 	index_t new_table( index_t len );
+	index_t add_key( index_t handler , index_t len , bool central );
 	index_t init_table( index_t handler );
 
-	index_t del( index_t handler , index_t index );
+	std::string del( index_t handler , index_t index ); // return the value , "" if fail
 	index_t add( index_t handler , char* value , std::vector<std::string> keys=std::vector<std::string>() );
 	std::string get( index_t handler , index_t index );
 
-	index_t add_key( index_t handler , index_t len , bool central );
-	void get_index( index_t handler , index_t key_handler , std::string key );
-	index_t search( index_t handler );
+//	void get_index( index_t handler , index_t key_handler , std::string key );
+//	index_t search( index_t handler );
 	
 	private:
 
@@ -207,7 +214,8 @@ class database
 //	void ins_key( index_t handler , index_t key_handler , index_t index , index_t order , std::string value );
 	
 	/* TODO */
-	index_t write_data( index_t handler , entry entry_0 ); // return position
+	index_t write_data( index_t handler , entry entry_0 , bool relocate = true ); // return position
+	entry read_data( index_t pos , bool relocate = true );
 
 	/* heap */
 
@@ -264,7 +272,7 @@ class Btree
 	 * make sure each key has a single corresponding value otherwise the behaviour is undefined
 	 * normally you should use del & add to change a value
 	 */
-	void modify( key_t key , index_t new_value ); 
+	void modify( std::string key , index_t new_value ); 
 	carrier* search( std::string key_1 , std::string key_2 );	//return all indices in the range 
 	index_t search( std::string key );	//return the first one matching the given key
 	index_t search( std::string key , index_t index );	//return the exact one matching the given info

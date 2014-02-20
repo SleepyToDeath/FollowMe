@@ -103,56 +103,139 @@ index_t database::new_table( index_t len )
 index_t database::add( index_t handler , char* value , std::vector<std::string> keys )
 {
 	table* table_0=tables[ handler ];
-
+	//prepare entry
 	entry tmp;
+	tmp.valid = 1;
 	tmp.keys = keys;
 	tmp.value = string( value );
 	tmp.index = table_0->table_meta_0.max_order;
 	table_0->table_meta_0.max_order++;
 	tmp.keys.push_back( iexts(tmp.index) );
 
+	//add to cache
 	cache_entry tmp_2;
 	tmp_2.entry_0 = tmp;
 	string tmp_ck = tmp.keys[ table_0->table_meta_0.central_key ];
 	if ( table_0->hash_0.find( tmp_ck ) )
 	{
-		tmp_2.next = table_0->hash_0[ tmp_ck ];
-		table_0->hash_0[ tmp_ck ] = tmp.index;
+		tmp_2.next = table_0->hash_0[ tmp_ck ].second;
+		tmp_2.prev = -1;
+		if ( tmp_2.next >= 0 )
+			table_0->cache[ tmp_2.next ].prev = tmp_2.entry_0.index;
+		table_0->hash_0[ tmp_ck ].second = tmp.index;
 		heap_inc( handler , tmp_ck , 1 );
 	}
 	else
 	{
-		table_0->hash_0.add( tmp_ck , tmp.index );
+		table_0->hash_0.add( tmp_ck , pair<index_t,index_t>( -1 , tmp.index ) );
 		heap_add( handler , tmp_ck , 1 );
 		tmp_2.next = -1;
+		tmp_2.prev = -1;
 	}
-	table_0->cache.add( tmp.index , tmp_2 );
 
-	if ( table_0->cache.count() >= db_meta_0.cache_capacity )
+	//update recent
+	table_0->recent.push( tmp_ck );
+	table_0->cache.add( tmp.index , tmp_2 );
+	if ( recent.size() > db_meta_0.recent_range )
 	{
-		index_t i = table_0->hash_0[ heap_min( handler ) ];
+		heap_inc( handler , recent.front() , -1 );
+		if ( table_0->heap[ table_0->hash_0[ recent.front() ].first ].count == 0 && table_0->hash_0[ recent.front() ].second == -1 )
+		{
+			heap_del( handler , hash_0[ recent.front() ].first );
+			table_0->hash_0.del( recent.front() );
+		}
+		recent.pop();
+	}
+
+	// add keys
+	for (int i=0; i<table_0->table_meta_0.key_num+1; i++)
+		table_0->keys[i].add( tmp.keys[i] , tmp.index );
+
+	// full , write back
+	while ( table_0->cache.count() >= db_meta_0.cache_capacity )
+	{
+		index_t i = table_0->hash_0[ heap_min( handler ) ].second;
 		while ( i >= 0 )
 		{
 			tmp_2 = table_0->cache[i];
 			index_t tmp_i = write_data( handler , tmp_2.entry_0 );
 			/* TODO change pos in index key tree */
-
+			table_0->keys[ table_0->table_meta_0.key_num ].modify( iexts( tmp_2.entry_0.index ) , tmp_i );
 			table_0->cache.del( i );
 			i = tmp_2.next;
 		}
-		table_0->hash_0.del( heap_min( handler ) );
-		heap_del( handler , 1 );
+		if ( table_0->heap[1].count <= 0 )
+		{
+			table_0->hash_0.del( heap_min( handler ) );
+			heap_del( handler , 1 );
+		}
+		else
+			table_0->hash_0[ heap_min( handler ) ].second = -1;
 	}
 
 }
 
-index_t database::del( index_t handler , index_t index )
+string database::del( index_t handler , index_t index )
 {
-	
+	table* tmpt = talbes[handler];
+	entry tmpe;
+	if ( tmpt->cache.find( index ) )
+	{
+		// remove from cache
+		tmpe = tmpt->cache[ index ].entry_0;
+		index_t tmpi = tmpt->cache[ index ].next;
+		if ( tmpi >= 0 )
+			tmpt->cache[ tmpi ].prev = tmpt->cache[ index ].prev;
+		tmpi = tmpt->cache[ index ].prev;
+		if ( tmpi >= 0 )
+			tmpt->cache[ tmpi ].next = tmpt->cache[ index ].next;
+		string tmpck = tmpt->cache[ index ].entry_0.keys[ tmpt->table_meta_0.central_key ];
+		if ( tmpt->hash_0[ tmpck ].second == index )
+			tmpt->hash_0[ tmpck ].second = tmpt->cache[ index ].next;
+		tmpt->cache.del( index );
+	}
+	else
+	{
+		// remove from disk
+		index_t tmpi = tmpt->keys[ tmpt->table_meta_0.key_num ].search( iexts( index ) )
+		tmpt->fio.seekp( tmpi );
+		tmpt->fio.put( 0 );
+		put_int( tmpt->fio , tmpt->table_meta_0.free_head );
+		tmpt->table_meta_0.free_head = tmpi;
+	}
+		
+	// remove keys
+	for (int i=0; i<tmpt->table_meta_0.key_num+1; i++)
+		tmpt->keys[i].del( tmpe.keys[i] , index );
 }
 
 string get( index_t handler , index_t index )
 {
+	table* tmpt = tables[ handler ];
+	// read from disk
+	if ( !tmpt->cache.find( index ) )
+	{
+		index_t pos_0 = tmpt->keys[ tmpt->table_meta_0.key_num ].search( iexts(index) );
+		entry wanted_entry = read_data( pos_0 );
+		int count = 1;
+		while ( count+pos_count*tmpt->table_meta_0.entry_size <= block_size )
+		{
+			count++;
+			entry tmpe = read_data( -1 , false );
+			if ( tmpe.keys[ tmpt->table_meta_0.central_key ] == wanted_entry.keys[ tmpt->table_meta_0.central_key ] )
+			{
+				//add it to cache
+
+
+
+			}
+			else
+				break;
+		}
+	}
+	// deal with heap , hash & recent affairs
+
+
 
 
 }
@@ -162,8 +245,8 @@ string get( index_t handler , index_t index )
 void database::swap_heap_entry( index_t handler , index_t i , index_t j )
 {
 	table* table_0 = tables[handler];
-	table_0->hash_0[table_0->heap[i].key] = j;
-	table_0->hash_0[table_0->heap[j].key] = i;
+	table_0->hash_0[table_0->heap[i].key].first = j;
+	table_0->hash_0[table_0->heap[j].key].first = i;
 	heap_entry tmp = table_0->heap[j];
 	table_0->heap[j] = table_0->heap[i];
 	table_0->heap[i] = tmp;
@@ -213,14 +296,14 @@ void database::heap_add( index_t handler , string key , index_t count_0 )
 {
 	table* table_0=tables[ handler ];
 	table_0->heap.push_back( heap_entry( key,count_0 ) );
-	table_0->hash_0[ key ] = table_0->heap.size();
+	table_0->hash_0[ key ].first = table_0->heap.size();
 	heap_up( handler , table_0->heap.size()-1 );
 }
 
 void database::heap_inc( index_t handler , string key , index_t delta )
 {
 	table* table_0=tables[ handler ];
-	table_0->heap[ table_0->hash_0[ key ] ].count += delta;
+	table_0->heap[ table_0->hash_0[ key ].first ].count += delta;
 }
 
 string database::heap_min( index_t handler )
