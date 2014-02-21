@@ -50,7 +50,7 @@ class table_meta
 	public:
 
 	index_t entry_size;
-	index_t max_entry_num; // max_pos/entry_size  
+	index_t max_entry_num; // max_pos/entry_size  initially 0
 	index_t free_head;
 	index_t key_num;
 	index_t central_key;
@@ -216,6 +216,10 @@ class database
 	/* TODO */
 	index_t write_data( index_t handler , entry entry_0 , bool relocate = true ); // return position
 	entry read_data( index_t pos , bool relocate = true );
+
+	void add_to_cache( index_t handler , entry tmpe );
+	void check_full( index_t handler );
+	void del_disk( index_t handler , index_t pos );
 
 	/* heap */
 
