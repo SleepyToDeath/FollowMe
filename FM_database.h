@@ -24,8 +24,9 @@ class db_meta
 
 	index_t cache_size;
 	index_t cache_capacity;
-	index_t block_size;
+	index_t block_size; // a.k.a. node_size
 	index_t recent_range;
+	index_t table_num;
 
 };
 
@@ -50,6 +51,7 @@ class table_meta
 	public:
 
 	index_t entry_size;
+	index_t value_size;
 	index_t max_entry_num; // max_pos/entry_size  initially 0
 	index_t free_head;
 	index_t key_num;
@@ -189,7 +191,7 @@ class database
 
 	public:
 
-	database();
+	database( bool new_db );
 	~database();
 
 /* TODO */
@@ -220,6 +222,8 @@ class database
 	void add_to_cache( index_t handler , entry tmpe );
 	void check_full( index_t handler );
 	void del_disk( index_t handler , index_t pos );
+
+	void resume_table( index_t index );
 
 	/* heap */
 
@@ -257,7 +261,7 @@ class Btree
 	class carrier
 	{
 		public:
-		carrier( index_t pos_0 , index_t rank_0 , std::string key_1_0 , std::string key_2_0 , index_t index_0 );
+		carrier( std::string key_1_0 , std::string key_2_0 , index_t index_0 , Btree* tree_0 );
 		index_t next(); // return next matching index ; -1 if invalid
 		
 		private:
