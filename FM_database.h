@@ -222,8 +222,10 @@ class database
 	void add_to_cache( index_t handler , entry tmpe );
 	void check_full( index_t handler );
 	void del_disk( index_t handler , index_t pos );
+	void write_back( index_t handler );
 
 	void resume_table( index_t index );
+	void clear_table( index_t handler );
 
 	/* heap */
 
@@ -274,6 +276,8 @@ class Btree
 
 	Btree( std::string index_0 , index_t cache_size_0 = default_cache_size , index_t cache_capacity_0 = default_cache_capacity , index_t node_size_0 = default_node_size , index_t key_size_0 = 0 );
 	Btree( std::string index_0 ); // read from meta file
+	~Btree();
+
 	void add( std::string key , index_t index );
 	void del( std::string key , index_t index );
 	/* modify is a fast way to change a value. BUT , 

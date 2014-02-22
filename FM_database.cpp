@@ -8,6 +8,7 @@ using std::pair;
 using std::stringstream;
 using std::fstream;
 using std::ios;
+using std::endl;
 
 index_t max( index_t a , index_t b )
 {
@@ -116,6 +117,46 @@ database::database( bool new_db )
 
 }
 
+database::~database()
+{
+	fstream fio;
+	fio.open( (store_directory+"database.meta").c_str() );
+	fio<<"cache_size="<<db_meta_0.cache_size<<endl;
+	fio<<"cache_capacity="<<db_meta_0.cache_capacity<<endl;
+	fio<<"block_size="<<db_meta_0.block_size<<endl;
+	fio<<"recent_range="<<db_meta_0.recent_range<<endl;
+	fio<<"table_num="<<db_meta_0.table_num<<endl;
+	fio.close();
+
+	for (int i=0; i<db_meta_0.table_num; i++)
+	{
+		clear_table( i );
+		delete tables[i];
+	}
+
+}
+
+void database::clear_table( index_t handler )
+{
+	table* tmpt = tables[ handler ];
+	fstream fio( (store_directory+itos( handler )+".meta").c_str );
+	fio<<"entry_size="<<tmpt->table_meta_0.entry_size<<endl;
+	fio<<"value_size="<<tmpt->table_meta_0.value_size<<endl;
+	fio<<"max_entry_num="<<tmpt->table_meta_0.max_entry_num<<endl;
+	fio<<"free_head="<<tmpt->table_meta_0.free_head<<endl;
+	fio<<"key_num="<<tmpt->table_meta_0.key_num<<endl;
+	fio<<"central_key="<<tmpt->table_meta_0.central_key<<endl;
+	fio<<"max_order="<<tmpt->table_meta_0.max_order<<endl;
+	fio<<"key_len"<<endl;
+	for( int i=0; i<tmpt->table_meta_0.key_num; i++)
+		fio<<tmpt->table_meta_0.key_len[i]<<endl;
+
+	fio.close();
+	fio.open( (store_directory+itos( handler )+".dat").c_str );
+	while ( tmpt->cache.count()>0 )
+		write_back( handler );
+
+}
 /* table & cache */
 
 void database::resume_table( index_t handler )
@@ -230,6 +271,27 @@ index_t database::init_table( index_t handler )
 	ready = true;
 }
 
+void database::write_back( index_t handler )
+{
+	table* table_0 = tables[ handler ];
+	index_t i = table_0->hash_0[ heap_min( handler ) ].second;
+	while ( i >= 0 )
+	{
+		cache_entry tmp_2 = table_0->cache[i];
+		index_t tmp_i = write_data( handler , tmp_2.entry_0 );
+		table_0->keys[ table_0->table_meta_0.key_num ].modify( iexts( tmp_2.entry_0.index ) , tmp_i );
+		table_0->cache.del( i );
+		i = tmp_2.next;
+	}
+	if ( table_0->heap[1].count <= 0 )
+	{
+		table_0->hash_0.del( heap_min( handler ) );
+		heap_del( handler , 1 );
+	}
+	else
+		table_0->hash_0[ heap_min( handler ) ].second = -1;
+}
+	
 void database::add_to_cache( index_t handler , entry tmp )
 {
 
@@ -285,25 +347,7 @@ void database::check_full( index_t handler )
 	}
 
 	while ( table_0->cache.count() >= db_meta_0.cache_capacity )
-	{
-		index_t i = table_0->hash_0[ heap_min( handler ) ].second;
-		while ( i >= 0 )
-		{
-			cache_entry tmp_2 = table_0->cache[i];
-			index_t tmp_i = write_data( handler , tmp_2.entry_0 );
-			/* TODO change pos in index key tree */
-			table_0->keys[ table_0->table_meta_0.key_num ].modify( iexts( tmp_2.entry_0.index ) , tmp_i );
-			table_0->cache.del( i );
-			i = tmp_2.next;
-		}
-		if ( table_0->heap[1].count <= 0 )
-		{
-			table_0->hash_0.del( heap_min( handler ) );
-			heap_del( handler , 1 );
-		}
-		else
-			table_0->hash_0[ heap_min( handler ) ].second = -1;
-	}
+		write_back( handler );
 }
 
 index_t database::add( index_t handler , char* value , std::vector<std::string> keys )
@@ -806,6 +850,26 @@ Btree::Btree( std::string index_0 )
 	cache = hash<index_t, node>( meta.cache_size );
 	fin.close();
 	fstream fin( (index+".dat").c_str() , ios::binary | ios::in | ios::out );
+}
+
+
+Btree::~Btree()
+{
+	index_t tmpi = meta.max_pos/node_size_byte+1;
+	for (int i=0; i<tmpi; i++)
+		if ( cache.find( i ) )
+			write_node( i , cache[i] );
+	fio.close();
+	fio( (meta.index+".meta").c_str );
+	fio<<"cache_capacity="<<meta.cache_capacity<<endl;
+	fio<<"cache_size="<<meta.cache_size<<endl;
+	fio<<"node_size="<<meta.node_size<<endl;
+	fio<<"key_size="<<meta.key_size<<endl;
+	fio<<"max_pos="<<meta.max_pos<<endl;
+	fio<<"free_head="<<meta.free_head<<endl;
+	fio<<"root="<<meta.root<<endl;
+	fio<<"height="<<meta.height<<endl;
+	fio.close();
 }
 
 void Btree::add( string key_0 , index_t index_0 )
