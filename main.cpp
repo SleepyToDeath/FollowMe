@@ -36,8 +36,8 @@ void basic()
 
 void small()
 {
-    int n = 100000;
-    int k = 5000;
+    int n = 1000;
+    int k = 50;
     int len = 20;
     database* db = new database( true );
     index_t h1 = db->new_table( len );
@@ -52,6 +52,8 @@ void small()
 	}
 	for (int i=0; i<n; i++)
         db->add( h1 , v1[i] , v2[i] );
+    for (int i=0; i<n; i+=5)
+        db->del( h1 , i );
 	vector<Btree::carrier*> v3;
     for (int i=0; i<n/k; i++)
         v3.push_back( db->search( h1 , k1 , mend_string("k"+itos( i ),len) , mend_string("k"+itos( i ),len) ) );

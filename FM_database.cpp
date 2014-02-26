@@ -364,10 +364,10 @@ void database::write_back( index_t handler )
 	{
 		cache_entry tmp_2 = table_0->cache[i];
 		index_t tmp_i = write_data( handler , tmp_2.entry_0 );
-/*        if ( tmp_2.entry_0.index == 21 )
+        if ( tmp_2.entry_0.index == 15 )
         {
             cout<<' '<<endl;
-        }*/
+        }
 		table_0->keys[ table_0->table_meta_0.key_num ]->modify( iexts( tmp_2.entry_0.index ) , tmp_i );
 		table_0->cache.del( i );
 		i = tmp_2.next;
@@ -477,10 +477,10 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 	tmp.index = table_0->table_meta_0.max_order+1;
 	table_0->table_meta_0.max_order++;
 	tmp.keys.push_back( iexts(tmp.index) );
-/*    if (tmp.index>=14533)
+    if (tmp.index== 19)
     {
         cout<<' ';
-    }*/
+    }
 
 	//add to cache
 	add_to_cache( handler , tmp );
@@ -513,7 +513,7 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
     // full , write back
     check_full( handler );
 
-/*    if (table_0->table_meta_0.max_order>=99999)
+/*    if (table_0->table_meta_0.max_order>=0)
     {
         index_t tmpi1=table_0->keys[0]->count(-2);
         index_t tmpi2=table_0->keys[1]->count(-2);
@@ -523,10 +523,10 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
         }
     }
 
-    if (table_0->table_meta_0.max_order>=14501)
+    if (table_0->table_meta_0.max_order>=16)
     {
-        index_t pos_0 = table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(14500) );
-        if (pos_0<0)
+        index_t pos_0 = table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(15) );
+        if (!table_0->cache.find(15) && pos_0==15 )
         {
             cout<<" error may occur here 8\n";
         }
@@ -538,7 +538,23 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 
 string database::del( index_t handler , index_t index )
 {
-	table* tmpt = tables[handler];
+    table* tmpt = tables[handler];
+
+    if ( index == 210 )
+    {
+        cout<<' ';
+    }
+
+    {
+        index_t tmpi1=tmpt->keys[0]->count(-2);
+        index_t tmpi2=tmpt->keys[1]->count(-2);
+        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1)
+        {
+            cout<<" error may occur here 7\n";
+        }
+    }
+
+
 	if ( !tmpt->ready ) return "";
 	entry tmpe;
 	if ( tmpt->cache.find( index ) )
@@ -568,18 +584,35 @@ string database::del( index_t handler , index_t index )
 		tmpt->table_meta_0.free_head = tmpi;*/
 	}
 		
-	// remove keys
-	for (int i=0; i<tmpt->table_meta_0.key_num+1; i++)
+
+    // remove keys
+    for (int i=0; i<tmpt->table_meta_0.key_num; i++)
 		tmpt->keys[i]->del( tmpe.keys[i] , index );
-	return tmpe.value;
+
+
+    index_t tmpp = tmpt->keys[ tmpt->table_meta_0.key_num ]->search( iexts( index ) );
+
+
+    tmpt->keys[ tmpt->table_meta_0.key_num ]->del( iexts( index ) , tmpp );
+
+    {
+        index_t tmpi1=tmpt->keys[0]->count(-2);
+        index_t tmpi2=tmpt->keys[1]->count(-2);
+        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1)
+        {
+            cout<<" error may occur here 7\n";
+        }
+    }
+
+    return tmpe.value;
 }
 
 string database::get( index_t handler , index_t index )
 {
-/*    if (index==14355)
+    if (index==90)
     {
         cout<<' ';
-    }*/
+    }
 	table* tmpt = tables[ handler ];
 	if ( !tmpt->ready ) return "";
 	entry wanted_entry;
@@ -627,10 +660,10 @@ string database::get( index_t handler , index_t index )
 
 index_t database::write_data( index_t handler , entry tmpe , bool relocate ) 
 {
-/*    if (tmpe.index>=97)
+    if (tmpe.index==90)
     {
         cout<<' ';
-    }*/
+    }
     table* tmpt = tables[ handler ];
 /*    if ( tmpe.index>100 )
     {
@@ -1096,11 +1129,11 @@ void Btree::add( string key_0 , index_t index_0 )
 /*	int l = tmp.key.length();
 	for (int i=l; i<meta.key_size; i++)
         tmp.key+=" "; */
-/*    if (index_0==693)
+    if (index_0==15)
     {
         cout<<' ';
     }
-    if (!fio.good())
+/*    if (!fio.good())
     {
         cout<<" error may occur here a \n";
     }*/
@@ -1218,57 +1251,70 @@ void Btree::del( string key_0 , index_t index_0 )
 /*	int l = tmp.key.length();
     for (int i=l; i<meta.key_size; i++)
         tmp.key+=" "; */
+    if (index_0 == 70)
+    {
+        cout<<' ';
+    }
 	index_t cur = meta.root;
-	int tmpi = -1;
+//    index_t prev = cur;
+    int tmpi = -1;
 	while ( cur>=0 )
 	{
-		node& tmpn = accessor( cur );
+//        prev = cur;
+        node& tmpn = accessor( cur );
 		tmpi = tmpn.find( tmp );
-		if ( tmpn.keys[tmpi] == tmp ) break;
+        if ( tmpi>=0 && tmpn.keys[tmpi] == tmp ) break;
 		cur = tmpn.sons[tmpi+1];
 	}
+//    cur = prev;
 	// now cur & tmpi is what I need
-	if ( cur == -1 ) return;
-	node& tmpn = accessor( cur );
+    if ( cur == -1 ) return;
+    node& tmpn = accessor( cur );
+    // delete the key
 	if ( tmpn.sons[tmpi+1] == -1 )
 	{
+        // leaf
 		for (int i=tmpi; i<tmpn.key_num-1; i++)
 			tmpn.keys[i] = tmpn.keys[i+1];
 		tmpn.key_num--;
 	}
 	else
 	{
-		index_t tmpi2 = tmpn.sons[tmpi];
-		index_t tmpi3;
+        // non-leaf
+        index_t tmpi3 = cur;
+        index_t tmpi2 = tmpn.sons[tmpi];
 		while ( tmpi2>=0 )
 		{
 			tmpi3 = tmpi2;
 			node& tmpn2 = accessor( tmpi2 );
-			tmpi2 = tmpn2.sons[tmpn2.key_num-1];
+            tmpi2 = tmpn2.sons[tmpn2.key_num];
 		}
-		node& tmpn2 = accessor( tmpi2 );
+        node& tmpn2 = accessor( tmpi3 );
         node& tmpn = accessor( cur );
         tmpn.keys[tmpi] = tmpn2.keys[tmpn2.key_num-1];
 		tmpn2.key_num--;
-		cur = tmpi2;
+        cur = tmpi3;
 	}
 
 	//now adjust cur
+    //  complement or combination
 	while ( cur != meta.root && accessor( cur ).key_num < (meta.node_size+1)/2-1 )
 	{
 		index_t tmpib;
 		node& tmpn = accessor( cur );
 		node& tmpnp = accessor( tmpn.parent );
-		tmpi = tmpn.find( tmpn.keys[0] );
+        tmpi = tmpnp.find( tmpn.keys[0] );
 		if ( tmpi == -1 )
-			tmpib = tmpnp.sons[1];
+            tmpib = tmpnp.sons[1]; // pick next brother
 		else
-			tmpib = tmpnp.sons[tmpi];
+            tmpib = tmpnp.sons[tmpi]; // pick previous brother
 		node& tmpnb = accessor( tmpib );
 		if ( tmpnb.key_num > (meta.node_size+1)/2-1 )
 		{
+            // complement
 			if ( tmpi >= 0 )
 			{
+                // previous brother
 				for (int i=tmpn.key_num; i>0; i--)
 				{
 					tmpn.keys[i]=tmpn.keys[i-1];
@@ -1277,65 +1323,88 @@ void Btree::del( string key_0 , index_t index_0 )
 				tmpn.sons[1] = tmpn.sons[0];
 				tmpn.keys[0] = tmpnp.keys[ tmpi ];
 				tmpn.sons[0] = tmpnb.sons[ tmpnb.key_num ];
+                if ( tmpn.sons[ 0 ] >= 0 )
+                    accessor ( tmpn.sons[0] ).parent = cur;
 				tmpnp.keys[ tmpi ] = tmpnb.keys[ tmpnb.key_num-1 ];
 				tmpnb.key_num--;
 				tmpn.key_num++;
 			}
 			else
 			{
+                // next brother
 				tmpn.keys[ tmpn.key_num ] = tmpnp.keys[0];
 				tmpn.sons[ tmpn.key_num+1 ] = tmpnb.sons[0];
+                if ( tmpn.sons[ tmpn.key_num+1 ] >= 0 )
+                    accessor ( tmpn.sons[ tmpn.key_num+1 ] ).parent = cur;
 				tmpnp.keys[0] = tmpnb.keys[0];
 				for (int i=0; i<tmpnb.key_num-1; i++)
 				{
 					tmpnb.keys[i]=tmpnb.keys[i+1];
 					tmpnb.sons[i]=tmpnb.sons[i+1];
 				}
-				tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
+                tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
 				tmpn.key_num++;
 				tmpnb.key_num++;
 			}
 		}
 		else
 		{
-			
+            if (cur==0)
+            {
+                cout<<' ';
+            }
+            // combination
 			if ( tmpi==-1 )
 			{
+                // next brother
 				tmpn.keys[ tmpn.key_num ] = tmpnp.keys[ 0 ];
 				for (int i=0; i<tmpnb.key_num; i++)
 				 {
+                    tmpn = accessor ( cur );
+                    tmpnb = accessor ( tmpib );
 					 tmpn.keys[ i+tmpn.key_num+1 ] = tmpnb.keys[i];
 					 tmpn.sons[ i+tmpn.key_num+1 ] = tmpnb.sons[i];
+                     if ( tmpn.sons[ i+tmpn.key_num+1 ] >= 0 )
+                         accessor( tmpn.sons[ i+tmpn.key_num+1 ] ).parent = cur;
 				 }
 				 tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] = tmpnb.sons[ tmpnb.key_num ];
-				 tmpn.key_num = tmpn.key_num+tmpnb.key_num+1;
+                 if ( tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] >= 0 )
+                     accessor( tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] ).parent = cur;
+                 tmpn.key_num = tmpn.key_num+tmpnb.key_num+1;
 				 for (int i=0; i<tmpnp.key_num-1; i++)
 				 {
 					 tmpnp.keys[i] = tmpnp.keys[i+1];
 					 tmpnp.sons[i+1] = tmpnp.sons[i+2];
 				 }
-				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ];
+//				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ];
 				 tmpnp.key_num--;
 				 del_node( tmpib );
 				 cur = tmpn.parent;
 			}
 			else
 			{
+                // previous brother
 				tmpnb.keys[ tmpnb.key_num ] = tmpnp.keys[ tmpi ];
 				for (int i=0; i<tmpn.key_num; i++)
 				 {
-					 tmpnb.keys[ i+tmpnb.key_num+1 ] = tmpn.keys[i];
+                    tmpn = accessor ( cur );
+                    tmpnb = accessor ( tmpib );
+                     tmpnb.keys[ i+tmpnb.key_num+1 ] = tmpn.keys[i];
 					 tmpnb.sons[ i+tmpnb.key_num+1 ] = tmpn.sons[i];
-				 }
+                     if ( tmpnb.sons[ i+tmpnb.key_num+1 ] >= 0 )
+                         accessor( tmpnb.sons[ i+tmpnb.key_num+1 ] ).parent = tmpib;
+                 }
 				// TODO
 				 tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] = tmpn.sons[ tmpn.key_num ];
-				 tmpnb.key_num = tmpn.key_num+tmpnb.key_num+1;
-				 for (int i=tmpi; i<tmpnp.key_num-1; i++)
+                 if ( tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] >= 0 )
+                     accessor( tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] ).parent = tmpib;
+                 tmpnb.key_num = tmpn.key_num+tmpnb.key_num+1;
+                 for (int i=tmpi+1; i<tmpnp.key_num-1; i++)
 				 {
 					 tmpnp.keys[i] = tmpnp.keys[i+1];
 					 tmpnp.sons[i+1] = tmpnp.sons[i+2];
 				 }
-				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ];
+//				 tmpnp.sons[ tmpnp.key_num-1 ] = tmpnp.sons[ tmpnp.key_num ]; //no need and is buggy
 				 tmpnp.key_num--;
 				 del_node( cur );
 				 cur = tmpnb.parent;
@@ -1346,8 +1415,12 @@ void Btree::del( string key_0 , index_t index_0 )
 	node& tmpn2 = accessor( cur );
 	if ( cur == meta.root && tmpn2.key_num == 0 )
 	{
+        // del root
 		meta.root = tmpn2.sons[0];
-		meta.height++;
+        if ( meta.root>=0 )
+        accessor( meta.root ).parent = -1;
+        del_node( cur );
+        meta.height--;
 	}
 }
 
@@ -1356,10 +1429,10 @@ void Btree::modify( string key_0 , index_t new_value )
 /*	int l = key_0.length();
     for (int i=l; i<meta.key_size; i++)
         key_0+=" "; */
-/*    if (key_0==iexts(14355))
+    if (key_0==iexts(15))
     {
         cout<<' ';
-    }*/
+    }
     pair<index_t,index_t> tmp = inner_search( key_0 );
 	if ( tmp.first == -1 ) return;
 	accessor( tmp.first ).keys[ tmp.second ].index = new_value;
@@ -1548,6 +1621,10 @@ void Btree::del_node( index_t pos )
 
 void Btree::write_node( index_t pos , node n )
 {
+    if (pos==0)
+    {
+        cout<<' ';
+    }
 	fio.seekp( pos );
 	put_int( fio , n.key_num );
 	put_int( fio , n.parent );
