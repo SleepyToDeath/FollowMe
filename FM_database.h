@@ -22,6 +22,8 @@ index_t max( index_t a , index_t b );
 
 index_t abs( index_t i );
 
+std::string mend_string( std::string s , std::size_t len );
+
 index_t atoi( std::string s );
 
 std::string itos( index_t i );
@@ -143,7 +145,8 @@ class hash
 
 	std::vector<hash_table_entry> table;
 
-	index_t prime_0;
+    index_t prime_0;
+    index_t prime_1;
 	index_t counter;
 
 };
@@ -200,13 +203,15 @@ class Btree
 
 	void add( std::string key , index_t index );
 	void del( std::string key , index_t index );
+
+    index_t count( index_t cur = -2 );
 	/* modify is a fast way to change a value. BUT , 
 	 * make sure each key has a single corresponding value otherwise the behaviour is undefined
 	 * normally you should use del & add to change a value
 	 */
 	void modify( std::string key , index_t new_value ); 
 	carrier* search( std::string key_1 , std::string key_2 );	//return all indices in the range 
-	index_t search( std::string key );	//return the first one matching the given key
+    index_t search( std::string key );	//return the first one matching the given key
 //  why did I do this ? insane?					 //	index_t search( std::string key , index_t index );	//return the exact one matching the given info
 
 	private:
@@ -253,6 +258,10 @@ class table
 	public:
 
 	table(){}
+    ~table(){
+        for (int i=0; i<table_meta_0.key_num+1; i++)
+            delete keys[i];
+    }
 
 	std::fstream fio;
 //	std::vector< std::fstream* > keyios;

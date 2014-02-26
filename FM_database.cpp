@@ -12,6 +12,7 @@ using std::ofstream;
 using std::ios;
 using std::endl;
 using std::cout;
+using std::hex;
 
 index_t FM_database::max( index_t a , index_t b )
 {
@@ -37,10 +38,19 @@ index_t FM_database::atoi( string s )
 	return i;
 }
 
+string FM_database::mend_string( string s , size_t len )
+{
+    size_t l = s.length();
+    for (int i=l; i<len; i++)
+        s+=' ';
+    return s;
+}
+
 string FM_database::itos( index_t i )
 {
 	stringstream ss;
 	ss<<i;
+//    cout<<"int to string : "<<ss.str()<<endl;
 	return ss.str();
 }
 
@@ -49,7 +59,7 @@ string FM_database::iexts( index_t i )
 	int l = sizeof( index_t );
 	string tmp="";
 	for (int j=0; j<l; j++)
-		tmp+=(char)((i>>(j*8)));
+        tmp=(char)((i>>(j*8)))+tmp;
 	return tmp;
 }
 
@@ -68,6 +78,7 @@ index_t FM_database::get_int( fstream& fio )
 	{
 		char ch;
 		fio.get( ch );
+//        cout<<"ch: "<<hex<<(int)ch<<endl;
 		tmpi = (tmpi<<8)+((index_t)ch & mask);
 		mask<<8;
 	}
@@ -103,8 +114,8 @@ database::database( bool new_db )
 		fin.open( init_file_name.c_str() );
 	else
 	{
-		ofstream fout( ( store_directory+"database.meta" ).c_str() );
-		fout.close();
+        ofstream fout( ( store_directory+"database.meta" ).c_str() , ios::app );
+        fout.close();
 		fin.open( ( store_directory+"database.meta" ).c_str() );
 	}
 	string s;
@@ -130,24 +141,31 @@ database::database( bool new_db )
 			size_t pos=s.find("=");
 			db_meta_0.recent_range=atoi(s.substr(pos+1,s.length()-pos-1));
 		}
-	}
-	db_meta_0.table_num = 0;
+        else if (s.find("table_num")!=string::npos)
+        {
+            size_t pos=s.find("=");
+            db_meta_0.table_num=atoi(s.substr(pos+1,s.length()-pos-1));
+        }
+    }
 	if ( !new_db )
 	{
-		tables = vector<table*>( db_meta_0.table_num , nullptr );
+        tables = vector<table*>( db_meta_0.table_num , NULL );
 		for ( int i=0; i<db_meta_0.table_num; i++)
 			resume_table( i );
 	}
+    else
+        db_meta_0.table_num = 0;
 
 }
 
 database::~database()
 {
 	fstream fio;
-	ofstream fout( (store_directory+"database.meta").c_str() );
+    ofstream fout( (store_directory+"database.meta").c_str(), ios::app );
 	fout.close();
 	fio.open( (store_directory+"database.meta").c_str() );
-	fio<<"cache_size="<<db_meta_0.cache_size<<endl;
+    if (! fio.is_open() ) cout<< " open fail 4 \n";
+    fio<<"cache_size="<<db_meta_0.cache_size<<endl;
 	fio<<"cache_capacity="<<db_meta_0.cache_capacity<<endl;
 	fio<<"block_size="<<db_meta_0.block_size<<endl;
 	fio<<"recent_range="<<db_meta_0.recent_range<<endl;
@@ -165,10 +183,11 @@ database::~database()
 void database::clear_table( index_t handler )
 {
 	table* tmpt = tables[ handler ];
-	ofstream fout( (store_directory+itos( handler )+".meta").c_str() );
+    ofstream fout( (store_directory+itos( handler )+".meta").c_str() , ios::app );
 	fout.close();
 	fstream fio( (store_directory+itos( handler )+".meta").c_str() );
-	fio<<"entry_size="<<tmpt->table_meta_0.entry_size<<endl;
+    if (! fio.is_open() ) cout<< " open fail 8 \n";
+    fio<<"entry_size="<<tmpt->table_meta_0.entry_size<<endl;
 	fio<<"value_size="<<tmpt->table_meta_0.value_size<<endl;
 	fio<<"max_entry_num="<<tmpt->table_meta_0.max_entry_num<<endl;
 	fio<<"free_head="<<tmpt->table_meta_0.free_head<<endl;
@@ -180,12 +199,19 @@ void database::clear_table( index_t handler )
 		fio<<tmpt->table_meta_0.key_len[i]<<endl;
 
 	fio.close();
-	fout.open( (store_directory+itos( handler )+".dat").c_str() );
+    fout.open( (store_directory+itos( handler )+".dat").c_str() , ios::app );
 	fout.close();
 	fio.open( (store_directory+itos( handler )+".dat").c_str() );
-	while ( tmpt->cache.count()>0 )
-		write_back( handler );
-
+    if (! fio.is_open() ) cout<< " open fail 5 \n";
+//    while ( tmpt->cache.count()>0 )
+//		write_back( handler );
+    for (int i=0; i<=tmpt->table_meta_0.max_order; i++)
+        if ( tmpt->cache.find( i ) )
+        {
+            index_t tmpi = write_data( handler , tmpt->cache[i].entry_0 );
+            tmpt->keys[ tmpt->table_meta_0.key_num ]->modify( iexts( tmpt->cache[i].entry_0.index ) , tmpi );
+            tmpt->cache.del( i );
+        }
 }
 /* table & cache */
 
@@ -193,10 +219,11 @@ void database::resume_table( index_t handler )
 {
 	table* tmpt = new table;
 	tables[ handler ] = tmpt;
-	ofstream fout((store_directory+itos( handler )+".dat").c_str() , ios::binary | ios::in | ios::out );
+    ofstream fout((store_directory+itos( handler )+".dat").c_str() , ios::app );
 	fout.close();
 	tmpt->fio.open((store_directory+itos( handler )+".dat").c_str() , ios::binary | ios::in | ios::out );
-	fstream fin( ( store_directory+itos( handler )+".meta" ).c_str() ); 
+    if (! tmpt->fio.is_open() ) cout<< " open fail 6 \n";
+    fstream fin( ( store_directory+itos( handler )+".meta" ).c_str() );
 	string s;
 	while (std::getline(fin,s))
 	{
@@ -238,14 +265,20 @@ void database::resume_table( index_t handler )
 		else if (s.find("key_len")!=string::npos)
 		{
 			for (int i=0;i<tmpt->table_meta_0.key_num;i++)
-				fin>>tmpt->table_meta_0.key_len[i];
+            {
+                index_t tmpi;
+                fin>>tmpi;
+                tmpt->table_meta_0.key_len.push_back( tmpi );
+            }
 			std::getline( fin , s );
 		}
 	}
+    tmpt->table_meta_0.key_len.push_back( sizeof(index_t) );
 
 	tmpt->cache = hash<index_t,cache_entry>( db_meta_0.cache_size );
 //	tmpt->heap = vector<heap_entry>( db_meta_0.cache_size , heap_entry() );
-	tmpt->hash_0 = hash<std::string,std::pair<index_t,index_t> >( db_meta_0.cache_size );
+    tmpt->heap.push_back( heap_entry() );
+    tmpt->hash_0 = hash<std::string,std::pair<index_t,index_t> >( db_meta_0.cache_size );
 
 	for (int i=0;i<tmpt->table_meta_0.key_num+1; i++)
 		tmpt->keys.push_back( new Btree( itos(handler)+"_"+itos(i) , true ) );
@@ -257,11 +290,13 @@ index_t database::new_table( index_t len )
 {
 	table* tmpt=new table;
 	tables.push_back(tmpt);
-	ofstream fout((store_directory+itos(tables.size()-1)+".dat").c_str() , ios::binary | ios::in | ios::out );
+    ofstream fout((store_directory+itos(tables.size()-1)+".dat").c_str() , ios::app );
 	fout.close();
 	tmpt->fio.open((store_directory+itos(tables.size()-1)+".dat").c_str() , ios::binary | ios::in | ios::out );
-	tmpt->cache = hash<index_t,cache_entry>( db_meta_0.cache_size );
+    if (! tmpt->fio.is_open() ) cout<< " open fail 7 \n";
+    tmpt->cache = hash<index_t,cache_entry>( db_meta_0.cache_size );
 //	tmpt->heap = vector<heap_entry>( db_meta_0.cache_size , heap_entry() );
+    tmpt->heap.push_back( heap_entry() );
 	tmpt->hash_0 = hash<std::string,std::pair<index_t,index_t> >( db_meta_0.cache_size ); // key , <pos,head>
 
 	tmpt->table_meta_0.value_size = len;
@@ -290,8 +325,8 @@ index_t database::add_key( index_t handler , index_t len , bool central )
 
 	tmpt->keys.push_back( new Btree( 
 		itos( handler )+"_"+itos( tmpt->table_meta_0.key_num-1 ),
-		db_meta_0.cache_size,
-		db_meta_0.cache_capacity,
+        db_meta_0.cache_size/(db_meta_0.block_size/len/10),
+        db_meta_0.cache_capacity/(db_meta_0.block_size/len/10),
 		db_meta_0.block_size,
 		len	) );
 	return tmpt->table_meta_0.key_num-1;
@@ -301,16 +336,16 @@ void database::init_table( index_t handler )
 {
 	index_t size = 0;
 	table_meta& tmpm = tables[ handler ]->table_meta_0;
-	for (int i=0; i<tmpm.key_num; i++)
+    tmpm.key_len.push_back( sizeof( index_t ) );
+    for (int i=0; i<tmpm.key_num+1; i++)
 		size += tmpm.key_len[i];
-	tmpm.entry_size = 1+2*sizeof( index_t )+tmpm.value_size+size;
-	tmpm.key_len.push_back( sizeof( index_t ) );
+    tmpm.entry_size = 1+2*sizeof( index_t )+tmpm.value_size+size;
 
 	table* tmpt = tables[ handler ];
 	tmpt->keys.push_back( new Btree(
 		itos( handler )+"_"+itos( tmpt->table_meta_0.key_num ),
-		db_meta_0.cache_size,
-		db_meta_0.cache_capacity,
+        db_meta_0.cache_size/(db_meta_0.block_size/sizeof(index_t)/10),
+        db_meta_0.cache_capacity/(db_meta_0.block_size/sizeof(index_t)/10),
 		db_meta_0.block_size,
 		sizeof( index_t ) ) );
 
@@ -320,26 +355,41 @@ void database::init_table( index_t handler )
 void database::write_back( index_t handler )
 {
 	table* table_0 = tables[ handler ];
-	index_t i = table_0->hash_0[ heap_min( handler ) ].second;
-	while ( i >= 0 )
+//	index_t i = table_0->hash_0[ heap_min( handler ) ].second; // changed
+    index_t j = 1;
+    while ( table_0->hash_0[ table_0->heap[j].key ].second < 0 )
+        j++;
+    index_t i = table_0->hash_0[ table_0->heap[j].key ].second;
+    while ( i >= 0 )
 	{
 		cache_entry tmp_2 = table_0->cache[i];
 		index_t tmp_i = write_data( handler , tmp_2.entry_0 );
+/*        if ( tmp_2.entry_0.index == 21 )
+        {
+            cout<<' '<<endl;
+        }*/
 		table_0->keys[ table_0->table_meta_0.key_num ]->modify( iexts( tmp_2.entry_0.index ) , tmp_i );
 		table_0->cache.del( i );
 		i = tmp_2.next;
 	}
-	if ( table_0->heap[1].count <= 0 )
+    if ( table_0->heap[j].count <= 0 ) //changed
 	{
-		table_0->hash_0.del( heap_min( handler ) );
-		heap_del( handler , 1 );
-	}
+//        string tmpk = heap_min( handler );//changed
+        string tmpk = table_0->heap[j].key;
+        heap_del( handler , j );
+        table_0->hash_0.del( tmpk );
+    }
 	else
-		table_0->hash_0[ heap_min( handler ) ].second = -1;
+//		table_0->hash_0[ heap_min( handler ) ].second = -1; //changed
+        table_0->hash_0[ table_0->heap[j].key ].second = -1;
 }
 	
 void database::add_to_cache( index_t handler , entry tmp )
 {
+/*    if (tmp.index>1000)
+    {
+        cout<<" error may occur before add_to_cache \n";
+    }*/
 
 	table* table_0 = tables[ handler ];
 
@@ -358,7 +408,7 @@ void database::add_to_cache( index_t handler , entry tmp )
 	else
 	{
 		table_0->hash_0.add( tmp_ck , pair<index_t,index_t>( -1 , tmp.index ) );
-		heap_add( handler , tmp_ck , 1 );
+        heap_add( handler , tmp_ck , 0 );
 		tmp_2.next = -1;
 		tmp_2.prev = -1;
 	}
@@ -369,6 +419,10 @@ void database::add_to_cache( index_t handler , entry tmp )
 
 void database::del_disk( index_t handler , index_t pos )
 {
+/*    if ( pos == 1330 || pos == 665 )
+    {
+        cout<<' ';
+    }*/
 	table* tmpt = tables[ handler ];
 
 	tmpt->fio.seekp( pos );
@@ -405,9 +459,9 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 {
 	table* table_0=tables[ handler ];
 	if ( !table_0->ready ) return -1;
-	//prepare entry
-	
-	int l = value.length();
+    //prepare entry
+
+/*	int l = value.length();
 	for (int i=l; i<table_0->table_meta_0.value_size; i++)
 		value+=" "; 
 	for (int i=0; i<table_0->table_meta_0.key_num; i++)
@@ -415,7 +469,7 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 		int l = keys[i].size();
 		for ( int j=l; j<table_0->table_meta_0.key_len[i];j++)
 			keys[i]+="";
-	}
+    }*/
 	entry tmp;
 	tmp.valid = 1;
 	tmp.keys = keys;
@@ -423,6 +477,10 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 	tmp.index = table_0->table_meta_0.max_order+1;
 	table_0->table_meta_0.max_order++;
 	tmp.keys.push_back( iexts(tmp.index) );
+/*    if (tmp.index>=14533)
+    {
+        cout<<' ';
+    }*/
 
 	//add to cache
 	add_to_cache( handler , tmp );
@@ -430,47 +488,51 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 	table_0->recent.push( tmp_ck );
 	heap_inc( handler , tmp_ck , 1 );
 
-	// add keys
+ /*   if (table_0->table_meta_0.max_order>=99780)
+    {
+        index_t pos_0 = table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(99780) );
+        if (pos_0<0)
+        {
+            cout<<" error may occur here 8\n";
+        }
+    }*/
+
+    // add keys
 	for (int i=0; i<table_0->table_meta_0.key_num+1; i++)
 		table_0->keys[i]->add( tmp.keys[i] , tmp.index );
 
-	check_full( handler );
+/*    if (table_0->table_meta_0.max_order>=99780)
+    {
+        index_t pos_0 = table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(99780) );
+        if (pos_0<0)
+        {
+            cout<<" error may occur here 8\n";
+        }
+    }*/
+
+    // full , write back
+    check_full( handler );
+
+/*    if (table_0->table_meta_0.max_order>=99999)
+    {
+        index_t tmpi1=table_0->keys[0]->count(-2);
+        index_t tmpi2=table_0->keys[1]->count(-2);
+        if (tmpi1!= tmpi2 || tmpi1!=table_0->table_meta_0.max_order+1)
+        {
+            cout<<" error may occur here 7\n";
+        }
+    }
+
+    if (table_0->table_meta_0.max_order>=14501)
+    {
+        index_t pos_0 = table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(14500) );
+        if (pos_0<0)
+        {
+            cout<<" error may occur here 8\n";
+        }
+    }*/
 
 	return tmp.index;
-
-/*	if ( recent.size() > db_meta_0.recent_range )
-	{
-		heap_inc( handler , recent.front() , -1 );
-		if ( table_0->heap[ table_0->hash_0[ recent.front() ].first ].count == 0 && table_0->hash_0[ recent.front() ].second == -1 )
-		{
-			heap_del( handler , hash_0[ recent.front() ].first );
-			table_0->hash_0.del( recent.front() );
-		}
-		recent.pop();
-	}
-*/
-
-	// full , write back
-/*	while ( table_0->cache.count() >= db_meta_0.cache_capacity )
-	{
-		index_t i = table_0->hash_0[ heap_min( handler ) ].second;
-		while ( i >= 0 )
-		{
-			cache_entry tmp_2 = table_0->cache[i];
-			index_t tmp_i = write_data( handler , tmp_2.entry_0 );
-
-			table_0->keys[ table_0->table_meta_0.key_num ].modify( iexts( tmp_2.entry_0.index ) , tmp_i );
-			table_0->cache.del( i );
-			i = tmp_2.next;
-		}
-		if ( table_0->heap[1].count <= 0 )
-		{
-			table_0->hash_0.del( heap_min( handler ) );
-			heap_del( handler , 1 );
-		}
-		else
-			table_0->hash_0[ heap_min( handler ) ].second = -1;
-	}*/
 
 }
 
@@ -514,6 +576,10 @@ string database::del( index_t handler , index_t index )
 
 string database::get( index_t handler , index_t index )
 {
+/*    if (index==14355)
+    {
+        cout<<' ';
+    }*/
 	table* tmpt = tables[ handler ];
 	if ( !tmpt->ready ) return "";
 	entry wanted_entry;
@@ -523,16 +589,21 @@ string database::get( index_t handler , index_t index )
 	{
 		index_t pos_0 = tmpt->keys[ tmpt->table_meta_0.key_num ]->search( iexts(index) );
 		wanted_entry = read_data( handler , pos_0 );
+        if ( wanted_entry.index != index )
+        {
+            cout<<" error may occur here 3\n";
+        }
 		add_to_cache( handler , wanted_entry );
 		tmpck = wanted_entry.keys[ tmpt->table_meta_0.central_key ];
 		int count = 1;
 		while ( count+pos_0/tmpt->table_meta_0.entry_size < tmpt->table_meta_0.max_entry_num && count*tmpt->table_meta_0.entry_size < db_meta_0.block_size )
 		{
-			entry tmpe = read_data( -1 , false );
+            entry tmpe = read_data( handler , -1 , false );
 			if ( tmpe.valid && tmpe.keys[ tmpt->table_meta_0.central_key ] == tmpck )
 			{
-				count++;
-				add_to_cache( handler , wanted_entry );
+                count++;
+//                cout<< tmpe.index << " added\n" <<endl;
+                add_to_cache( handler , tmpe );
 			}
 			else
 				break;
@@ -556,7 +627,15 @@ string database::get( index_t handler , index_t index )
 
 index_t database::write_data( index_t handler , entry tmpe , bool relocate ) 
 {
-	table* tmpt = tables[ handler ];
+/*    if (tmpe.index>=97)
+    {
+        cout<<' ';
+    }*/
+    table* tmpt = tables[ handler ];
+/*    if ( tmpe.index>100 )
+    {
+        cout<< " error may occur here at write data \n";
+    }*/
 	index_t tmpi = -1;
 	if ( relocate )
 	{
@@ -566,20 +645,36 @@ index_t database::write_data( index_t handler , entry tmpe , bool relocate )
 			tmpt->fio.seekg( tmpi );
 			tmpt->fio.get();
 			tmpt->table_meta_0.free_head = get_int( tmpt->fio );
-			tmpt->fio.seekp( tmpi );
+            tmpt->fio.seekp( tmpi ); //cout<<" free area used\n";
 		}
 		else
 		{
 			tmpt->table_meta_0.max_entry_num++;
 			tmpi = tmpt->table_meta_0.max_entry_num*tmpt->table_meta_0.entry_size;
+            tmpt->fio.seekp( tmpi );
 		}
 	}
-	tmpt->fio.put( tmpe.valid );
+    while ( tmpt->fio.tellp() > tmpt->table_meta_0.max_entry_num*tmpt->table_meta_0.entry_size )
+        tmpt->table_meta_0.max_entry_num++;
+
+/*    {
+        fstream fio( "0.dat" , ios::binary | ios::in | ios::out );
+        fio.seekg( tmpi ); //cout<<"what the fuck!\n";
+        char ch;
+        fio.get( ch );
+        if (ch==1)
+        {
+            cout<<"error may occur here 4\n";
+        }
+        fio.close();
+    }*/
+//    cout<< " fio position: "<< tmpt->fio.tellp()<<endl;
+    tmpt->fio.put( tmpe.valid );
 	put_int( tmpt->fio , tmpe.index );
 	put_int( tmpt->fio , tmpi );
 	tmpt->fio<<tmpe.value;
 	for (int i=0; i<tmpt->table_meta_0.key_num+1; i++)
-		tmpt->fio<<tmpe.keys[i];
+        tmpt->fio<<tmpe.keys[i];
 	return tmpi;
 }
 
@@ -588,7 +683,8 @@ entry database::read_data( index_t handler , index_t pos , bool relocate )
 	entry tmpe;
 	fstream& fio = tables[ handler ]->fio;
 	table_meta& tmpm = tables[ handler ]->table_meta_0;
-	if ( relocate )
+    tmpe.keys = vector<string>( tmpm.key_num+1 , "" );
+    if ( relocate )
 		fio.seekg( pos );
 	fio.get( tmpe.valid );
 	tmpe.index = get_int( fio );
@@ -596,6 +692,11 @@ entry database::read_data( index_t handler , index_t pos , bool relocate )
 	tmpe.value = get_string( fio , tmpm.value_size );
 	for (int i=0; i<tmpm.key_num+1; i++)
 		tmpe.keys[i] = get_string( fio , tmpm.key_len[i] );
+/*    if ( tmpe.index > 100 )
+    {
+        cout<<" error may occur at read data \n";
+        cout<<" pos: "<<fio.tellg()<<endl;
+    }*/
 	return tmpe;
 
 }
@@ -655,14 +756,18 @@ void database::heap_add( index_t handler , string key , index_t count_0 )
 {
 	table* table_0=tables[ handler ];
 	table_0->heap.push_back( heap_entry( key,count_0 ) );
-	table_0->hash_0[ key ].first = table_0->heap.size();
+    table_0->hash_0[ key ].first = table_0->heap.size()-1;
 	heap_up( handler , table_0->heap.size()-1 );
 }
 
 void database::heap_inc( index_t handler , string key , index_t delta )
 {
 	table* table_0=tables[ handler ];
-	table_0->heap[ table_0->hash_0[ key ].first ].count += delta;
+    index_t tmpi = table_0->hash_0[ key ].first;
+//    cout<<" heap_inc : tmpi = "<< tmpi<<endl;
+    table_0->heap[ tmpi ].count += delta;
+    heap_up( handler , tmpi );
+    heap_down( handler , tmpi );
 }
 
 string database::heap_min( index_t handler )
@@ -682,12 +787,20 @@ hash<key_t,value_t>::hash( index_t size )
 			for (int j=1;i*j<=size;j++)
 				prime[i*j]=true;
 	}
-	for (int j=size; j>1; j--)
+    int j;
+    for (j=size; j>1; j--)
 		if ( !prime[j] )
 		{
 			prime_0=j;
 			break;
 		}
+    j--;
+    for (; j>1; j--)
+        if ( !prime[j] )
+        {
+            prime_1=j;
+            break;
+        }
 //	hash_table_entry tmphte;
 	table=vector<hash_table_entry>( (size_t)size+1 );
 //	for (size_t i=0; i<size+1; i++)
@@ -699,19 +812,24 @@ hash<key_t,value_t>::hash( index_t size )
 template<class key_t , class value_t>
 void hash<key_t,value_t>::add( key_t key , value_t value )
 {
+    bool flag = false;
+//    cout<<endl;
 	for (int i=0;i<prime_0;i++)
 	{
 		int hash_value=h(key,i);
+//        cout<<" hash_value : "<<hash_value<<endl;
 		if (!table[hash_value].used || !table[hash_value].valid || table[hash_value].key==key)
 		{
 			table[hash_value].used=true;
 			table[hash_value].valid=true;
 			table[hash_value].key=key;
 			table[hash_value].value=value;
-			counter--;
+            counter++;
+            flag = true;
 			break;
 		}
 	}
+    if ( !flag ) cout<<"hash add fail\n";
 
 }
 
@@ -725,6 +843,7 @@ void hash<key_t,value_t>::del( key_t key )
 		{
 			table[hash_value].valid=false;
 			counter--;
+            break;
 		}
 	}
 }
@@ -738,6 +857,7 @@ value_t& hash<key_t,value_t>::operator[](key_t key)
 		if (!table[hash_value].used || table[hash_value].valid && table[hash_value].key==key)
 			return table[hash_value].value;
 	}
+    cout<<" hash::[] may have error \n";
 	return table[0].value;
 }
 
@@ -764,7 +884,7 @@ index_t hash<key_t,value_t>::count()
 template<class key_t, class value_t>
 index_t hash<key_t,value_t>::h0( index_t value )
 {
-	return value%prime_0;
+    return value;
 }
 
 template<class key_t, class value_t>
@@ -776,21 +896,26 @@ index_t hash<key_t,value_t>::h0( string value ) // BKDR hash
 	for (int i=0;i<l;i++)
 		hash = hash * seed + value[i];
 
-	return abs(hash % prime_0);
+    return hash;
 }
 
 template<class key_t , class value_t>
 index_t hash<key_t,value_t>::h( key_t key , index_t i )
 {
 	index_t key_1=h0(key);
-	return abs( key_1 % prime_0 + i * key_1 % (prime_0-1) ) % prime_0;
+//    cout<<key_1<<endl;
+    return abs( key_1 % prime_0 + i *prime_1 ) % prime_0;
 }
 
 Btree::carrier::carrier( std::string key_1_0 , std::string key_2_0 , index_t index_0 , Btree* tree_0)
 :key_1(key_1_0),key_2(key_2_0),index(index_0),tree(tree_0)
 {
 	key_0 = key_1_0;
-	initial = true;
+//	initial = true;
+//    if ( index_0>100 )
+//    {
+//        cout<<" error may occur here 2 \n";
+//    }
 }
 
 index_t Btree::carrier::next()
@@ -799,23 +924,27 @@ index_t Btree::carrier::next()
 	key tmp;
 	tmp.index = index;
 	tmp.key = key_0;
-	if ( !initial )
-	{
+//	if ( !initial )
+//	{
 		while ( cur >= 0 )
 		{
 			node& tmpn = tree->accessor( cur );
 			index_t tmpi = tmpn.find( tmp );
-			if ( tmpi < tmpn.key_num-1 )
+            if ( tmpi < tmpn.key_num-1 )
 			{
-				key_0 = tmpn.keys[ tmpi ].key;
-				index = tmpn.keys[ tmpi ].index;
+                key_0 = tmpn.keys[ tmpi+1 ].key;
+                index = tmpn.keys[ tmpi+1 ].index;
 			}
 			cur = tmpn.sons[tmpi+1];
 		}
-	}
-	initial = false;
-	if ( key_0 > key_2 || key_0 < key_1 ) return -1;
-	return index;
+//	}
+    if ( key_0 > key_2 || key_0 < key_1 || index == tmp.index )
+    {
+//        initial = false;
+        return -1;
+    }
+//    initial = false;
+    return index;
 }
 
 index_t Btree::node::find( key key_0 )
@@ -835,7 +964,7 @@ index_t Btree::node::find( key key_0 )
 Btree::Btree( std::string index_0 , index_t cache_size_0 , index_t cache_capacity_0 , index_t node_size_0 , index_t key_size_0 )
 {
 	meta.index = index_0;
-	meta.cache_size = cache_size_0;
+    meta.cache_size = cache_size_0;
 	meta.cache_capacity = cache_capacity_0;
 	meta.node_size = node_size_0;
 	meta.key_size = key_size_0;
@@ -847,9 +976,12 @@ Btree::Btree( std::string index_0 , index_t cache_size_0 , index_t cache_capacit
 	meta.node_size = max( meta.node_size , 3 );
 	node_size_byte = meta.node_size*meta.key_size+(meta.node_size*2+3)*sizeof(index_t);
 	cache = hash<index_t, node>( meta.cache_size );
-	ofstream fout((store_directory+meta.index+".dat").c_str()); 
+    cache_tail = -1;
+    cache_head = -1;
+    ofstream fout((store_directory+meta.index+".dat").c_str() , ios::app );
 	fout.close();
 	fio.open( (store_directory+meta.index+".dat").c_str() , ios::binary | ios::in | ios::out );
+    if (! fio.is_open() ) cout<< " open fail 1 \n";
 //	cout<<"open state is :"<< fio.is_open()<<endl;
 }
 
@@ -901,13 +1033,16 @@ Btree::Btree( std::string index , bool resume )
 			meta.height = atoi(s.substr(pos+1,s.length()-pos-1));
 		}
 	}
+    cache_tail = -1;
+    cache_head = -1;
 
 	node_size_byte = meta.node_size*meta.key_size+(meta.node_size*2+3)*sizeof(index_t);
 	cache = hash<index_t, node>( meta.cache_size );
 	fin.close();
-	ofstream fout((store_directory+meta.index+".dat").c_str()); 
+    ofstream fout((store_directory+meta.index+".dat").c_str() , ios::app );
 	fout.close();
 	fio.open( (store_directory+meta.index+".dat").c_str() , ios::binary | ios::in | ios::out );
+    if (! fio.is_open() ) cout<< " open fail 2 \n";
 }
 
 
@@ -915,13 +1050,14 @@ Btree::~Btree()
 {
 	index_t tmpi = meta.max_pos/node_size_byte+1;
 	for (int i=0; i<tmpi; i++)
-		if ( cache.find( i ) )
-			write_node( i , cache[i] );
+        if ( cache.find( i*node_size_byte ) )
+            write_node( i*node_size_byte , cache[i*node_size_byte] );
 	fio.close();
-	ofstream fout( (store_directory+meta.index+".meta").c_str() );
+    ofstream fout( (store_directory+meta.index+".meta").c_str() , ios::app );
 	fout.close();
-	fio.open( (store_directory+meta.index+".meta").c_str() );
-	fio<<"cache_capacity="<<meta.cache_capacity<<endl;
+    fio.open( (store_directory+meta.index+".meta").c_str() );
+    if (! fio.is_open() ) cout<< " open fail 3 \n";
+    fio<<"cache_capacity="<<meta.cache_capacity<<endl;
 	fio<<"cache_size="<<meta.cache_size<<endl;
 	fio<<"node_size="<<meta.node_size<<endl;
 	fio<<"key_size="<<meta.key_size<<endl;
@@ -932,17 +1068,57 @@ Btree::~Btree()
 	fio.close();
 }
 
+index_t Btree::count( index_t cur )
+{
+    if ( cur==-1 ) return 0;
+    if ( cur==-2 ) cur = meta.root;
+    node& tmpn = accessor( cur );
+    index_t counter = tmpn.key_num;
+    for (int i=0;i<tmpn.key_num+1;i++)
+    {
+        node& tmpn = accessor( cur );
+        counter+=count( tmpn.sons[i] );
+    }
+    return counter;
+}
+
+
 void Btree::add( string key_0 , index_t index_0 )
 {
 	key tmp;
 	tmp.key = key_0;
 	tmp.index = index_0;
+/*    if ( tmp.index > 10000 )
+    {
+        cout<<" error may occur at Btree::add \n";
+    }*/
 	// make sure every key is of length key_size
-	int l = tmp.key.length();
+/*	int l = tmp.key.length();
 	for (int i=l; i<meta.key_size; i++)
-		tmp.key+=" "; 
+        tmp.key+=" "; */
+/*    if (index_0==693)
+    {
+        cout<<' ';
+    }
+    if (!fio.good())
+    {
+        cout<<" error may occur here a \n";
+    }*/
+/*    if (index_0>0)
+        for (int i=0; i<=meta.max_pos/node_size_byte; i++)
+        {
+            node& tmpn=accessor(i*node_size_byte);
+            if (tmpn.key_num==0 || tmpn.sons[0]>=0 && tmpn.sons[tmpn.key_num]<0)
+            {
+                cout<<" error may occur here 9 \n";
+            }
+        }
 
-	if ( meta.root == -1 )
+    if (!fio.good())
+    {
+        cout<<" error may occur here a \n";
+    }*/
+    if ( meta.root == -1 )
 	{
 		meta.root = new_node();	
 		meta.height = 0;
@@ -956,12 +1132,18 @@ void Btree::add( string key_0 , index_t index_0 )
 		cur = tmpn.sons[tmpi+1];
 	}
 
-	node& tmpn = accessor( cur );
+    node& tmpn = accessor( cur );
 	int tmpi = tmpn.find( tmp );
 	if ( tmpi>=0 && tmpn.keys[tmpi]==tmp ) return;
-	index_t new_son = -1;
-	while ( cur>=0 )
+    index_t new_son = -1;
+
+
+    while ( cur>=0 )
 	{
+/*        if (cur == 8208 && index_0 == 51595)
+        {
+            cout<<' ';
+        }*/
 		node& tmpn = accessor( cur );
 		int tmpi = tmpn.find( tmp );
 		for (int i=tmpn.key_num-1; i>tmpi; i--)
@@ -969,36 +1151,62 @@ void Btree::add( string key_0 , index_t index_0 )
 			tmpn.keys[i+1] = tmpn.keys[i];
 			tmpn.sons[i+2] = tmpn.sons[i+1];
 		}
+//        tmpn.sons[tmpi+2] = tmpn.sons[tmpi+1];
 		tmpn.keys[tmpi+1] = tmp;
 		tmpn.sons[tmpi+2] = new_son;
 		tmpn.key_num++;
-		if ( tmpn.key_num < meta.key_size-1 ) break;
-		tmpi = tmpn.key_num / 2;
-		new_son = new_node();
-		node& tmpn2 = accessor( new_son );
-		for (int i=tmpi+1; i< tmpn.key_num; i++)
+/*        for (int i=0;i<tmpn.key_num;i++)
+        {
+            if (tmpn.sons[0]>=0 && tmpn.sons[1]<0 || tmpn.keys[i].index>100 && tmpn.keys[i].index%35 !=0)
+            {
+                cout<<" error may occur here 1 \n";
+            }
+        }*/
+        if ( tmpn.key_num < meta.node_size-1 ) break;
+/*    if (cur == 8208)
+    {
+        cout<<" ";
+    }*/
+        tmpi = tmpn.key_num / 2;
+        new_son = new_node();
+        node& tmpn2 = accessor( new_son );
+        for (int i=tmpi+1; i< tmpn.key_num; i++)
 		{
 			tmpn2.keys[i-tmpi-1] = tmpn.keys[i];
 			tmpn2.sons[i-tmpi-1] = tmpn.sons[i];
 		}
-		tmpn2.sons[tmpn.key_num-tmpi] = tmpn.sons[tmpn.key_num];
+        tmpn2.sons[tmpn.key_num-tmpi-1] = tmpn.sons[tmpn.key_num];
 		tmp = tmpn.keys[tmpi];
 		tmpn2.key_num = tmpn.key_num-tmpi-1;
 		tmpn.key_num = tmpi;
 		tmpn2.parent = tmpn.parent;
-		cur = tmpn.parent;
+        for (int i=0; i<tmpn2.key_num+1; i++)
+        {
+            node& tmpn2 = accessor( new_son );
+            if ( tmpn2.sons[i]>=0 )
+                accessor( tmpn2.sons[i] ).parent = new_son;
+        }
+        cur = accessor( cur ).parent;
 	}
-	if ( cur == -1 )
+
+    if ( cur == -1 )
 	{
 		index_t tmpi = new_node();
 		node& tmpn = accessor( tmpi );
 		tmpn.keys[0] = tmp;
 		tmpn.sons[0] = meta.root;
 		tmpn.sons[1] = new_son;
+        tmpn.key_num = 1;
 		accessor( meta.root ).parent = tmpi;
+        accessor( new_son ).parent = tmpi;
 		meta.root = tmpi;
+        meta.height ++;
 	}
 		
+/*    if (!fio.good())
+    {
+        cout<<" error may occur here a \n";
+    }*/
 }
 
 /* possible problem: empty son not set to -1 */
@@ -1007,9 +1215,9 @@ void Btree::del( string key_0 , index_t index_0 )
 	key tmp;
 	tmp.key = key_0;
 	tmp.index = index_0;
-	int l = tmp.key.length();
-	for (int i=l; i<meta.key_size; i++)
-		tmp.key+=" "; 
+/*	int l = tmp.key.length();
+    for (int i=l; i<meta.key_size; i++)
+        tmp.key+=" "; */
 	index_t cur = meta.root;
 	int tmpi = -1;
 	while ( cur>=0 )
@@ -1039,7 +1247,8 @@ void Btree::del( string key_0 , index_t index_0 )
 			tmpi2 = tmpn2.sons[tmpn2.key_num-1];
 		}
 		node& tmpn2 = accessor( tmpi2 );
-		tmpn.keys[tmpi] = tmpn2.keys[tmpn2.key_num-1];
+        node& tmpn = accessor( cur );
+        tmpn.keys[tmpi] = tmpn2.keys[tmpn2.key_num-1];
 		tmpn2.key_num--;
 		cur = tmpi2;
 	}
@@ -1144,31 +1353,43 @@ void Btree::del( string key_0 , index_t index_0 )
 
 void Btree::modify( string key_0 , index_t new_value )
 {
-	int l = key_0.length();
-	for (int i=l; i<meta.key_size; i++)
-		key_0+=" "; 
-	pair<index_t,index_t> tmp = inner_search( key_0 );
+/*	int l = key_0.length();
+    for (int i=l; i<meta.key_size; i++)
+        key_0+=" "; */
+/*    if (key_0==iexts(14355))
+    {
+        cout<<' ';
+    }*/
+    pair<index_t,index_t> tmp = inner_search( key_0 );
 	if ( tmp.first == -1 ) return;
 	accessor( tmp.first ).keys[ tmp.second ].index = new_value;
 }
 
 Btree::carrier* Btree::search( std::string key_1 , std::string key_2 )
 {
-	int l = key_1.length();
+/*	int l = key_1.length();
 	for (int i=l; i<meta.key_size; i++)
-		key_1+=" "; 
-	l = key_2.length();
+        key_1+=" "; */
+/*	l = key_2.length();
 	for (int i=l; i<meta.key_size; i++)
-		key_2+=" "; 
-	pair<index_t,index_t> tmp = inner_search( key_1 );
-	return new carrier(	key_1 , key_2 , accessor( tmp.first ).keys[ tmp.second ].index , this );
+        key_2+=" "; */
+//    pair<index_t,index_t> tmp = inner_search( key_1 );
+//    if (accessor( tmp.first ).keys[ tmp.second ].index>100)
+//    {
+//        cout<<" error may occur at Btree::search \n";
+//    }
+    return new carrier(	key_1 , key_2 , MAX_INDEX_T , this ); //accessor( tmp.first ).keys[ tmp.second ].index , this );
 }
 
 index_t Btree::search( std::string key )
 {
-	int l = key.length();
+/*	int l = key.length();
 	for (int i=l; i<meta.key_size; i++)
-		key+=" "; 
+        key+=" "; */
+/*    if ( key == iexts(21) )
+    {
+        cout<<" ";
+    }*/
 	pair<index_t,index_t> tmp = inner_search( key );
 	if ( tmp.first == -1 ) return -1;
 	return accessor( tmp.first ).keys[ tmp.second ].index;
@@ -1195,9 +1416,9 @@ index_t Btree::search( std::string key , index_t index )
 
 std::pair<index_t,index_t> Btree::inner_search( std::string key_0 )
 {
-	int l = key_0.length();
+/*	int l = key_0.length();
 	for (int i=l; i<meta.key_size; i++)
-		key_0+=" "; 
+        key_0+=" "; */
 	index_t cur = meta.root;
 	key tmp;
 	tmp.index = -1;
@@ -1215,7 +1436,15 @@ std::pair<index_t,index_t> Btree::inner_search( std::string key_0 )
 
 Btree::node& Btree::accessor( index_t pos )
 {
-	// read from data file
+/*    if (pos == 32736)
+    {
+        cout<<' ';
+    }
+    if (!fio.good())
+    {
+        cout<<" error may occur here a \n";
+    }*/
+    // read from data file
 	if ( !cache.find( pos ) )
 	{
 		node tmp = read_node( pos );
@@ -1226,27 +1455,51 @@ Btree::node& Btree::accessor( index_t pos )
 	// update rank in cache
 	if ( cache[pos].next >= 0 )
 		cache[cache[pos].next].prev = cache[pos].prev;
-	if ( cache[pos].prev >= 0 )
+    if ( cache[pos].prev >= 0 && pos != cache_tail )
 		cache[cache[pos].prev].next = cache[pos].next;
 	if ( pos == cache_head )
 		cache_head = cache[pos].next;
-	if ( cache_head == -1 )
+    if ( cache_head == -1 )
 		cache_head = pos;
-	cache[pos].prev = cache_tail;
+    if ( cache_tail != pos )
+        cache[pos].prev = cache_tail;
+//    else
+//        cache[pos].prev = -1;
 	cache[pos].next = -1;
-	if ( cache_tail >= 0 )
+    if ( cache_tail >= 0 && cache_tail != pos )
 		cache[ cache_tail ].next = pos;
-	cache_tail = pos;
+    cache_tail = pos;
+/*    {
+        index_t tmpi = cache_tail;
+        int count=0;
+        while (tmpi!=cache_head)
+        {
+            count++;
+            tmpi = cache[tmpi].prev;
+        }
+        if (tmpi>=0) count++;
+        if (count<cache.count())
+        {
+            cout<<" error may occur here 5\n";
+        }
+    }*/
 	// eliminate oldest one
 	if ( cache.count() > meta.cache_capacity )
 	{
 		index_t tmpi = cache_head;
+        if ( cache[ cache_head ].next >= 0 )
+            cache[ cache[ cache_head ].next ].prev = -1;
 		cache_head = cache[ cache_head ].next;
 		write_node( tmpi , cache[ tmpi ] );
 		cache.del( tmpi );
-		cache[ cache_head ].prev = -1;
+//		cache[ cache_head ].prev = -1;
 	}
 		
+/*    if (cache[pos].sons[0]>=0 && cache[pos].sons[cache[pos].key_num]<0)
+    {
+        node& tmpn=cache[pos];
+        cout<<" error may occur here 6\n";
+    }*/
 	return cache[pos];
 }
 
@@ -1310,7 +1563,8 @@ void Btree::write_node( index_t pos , node n )
 Btree::node Btree::read_node( index_t pos )
 {
 	fio.seekg( pos );
-//	cout<<" fio state is:"<<fio.is_open()<<std::endl;
+//    cout<<" fio state is:"<<fio.good()<<std::endl;
+//    index_t tmpit= fio.tellg();
 	node n;
 	n.key_num = get_int( fio );
 	n.parent = get_int( fio );
@@ -1330,6 +1584,13 @@ Btree::node Btree::read_node( index_t pos )
 	}
 	for (int i=0; i<meta.node_size+1; i++)
 		n.sons[i] = get_int( fio );
+/*    for (int i=0; i<n.key_num; i++)
+    {
+        if (n.keys[i].index>10000)
+        {
+            cout<<" error may occur at read node \n";
+        }
+    }*/
 	return n;
 }
 

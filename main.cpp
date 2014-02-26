@@ -36,35 +36,58 @@ void basic()
 
 void small()
 {
-	int n = 100;
-	database db( true );
-	index_t h1 = db.new_table( 5 );
-	index_t k1 = db.add_key( h1 , 5 , true );
-	db.init_table( h1 );
+    int n = 100000;
+    int k = 5000;
+    int len = 20;
+    database* db = new database( true );
+    index_t h1 = db->new_table( len );
+    index_t k1 = db->add_key( h1 , len , true );
+    db->init_table( h1 );
 	vector<string> v1;
 	vector< vector<string> > v2;
 	for (int i=0; i<n; i++)
 	{
-		v1.push_back( itos( i ) );
-		v2.push_back( vector<string>( 1 , "k"+itos( i%20 ) ) );
+        v1.push_back( mend_string(itos( i ),len) );
+        v2.push_back( vector<string>( 1 , mend_string("k"+itos( i%(n/k) ),len) ) );
 	}
 	for (int i=0; i<n; i++)
-		db.add( h1 , v1[i] , v2[i] );
+        db->add( h1 , v1[i] , v2[i] );
 	vector<Btree::carrier*> v3;
-	for (int i=0; i<20; i++)
-		v3.push_back( db.search( h1 , k1 , "k"+itos( i ) , "k"+itos( i ) ) );
-	for (int i=0; i<20; i++)
+    for (int i=0; i<n/k; i++)
+        v3.push_back( db->search( h1 , k1 , mend_string("k"+itos( i ),len) , mend_string("k"+itos( i ),len) ) );
+    for (int i=0; i<n/k; i++)
 	{
 		cout<<'k'<<i<<" :"<<endl;
 		index_t tmpi;
 		tmpi = v3[i]->next();
 		while (tmpi>=0)
 		{
-			cout<<db.get( h1 , tmpi )<<' ';
-			tmpi = v3[i]->next();
+            cout<<db->get( h1 , tmpi )<<' ';
+//            db->get( h1 , tmpi );
+            tmpi = v3[i]->next();
 		}
 		cout<<endl;
 	}
+    delete db;
+    cout<<" Now restart!\n";
+    db= new database( false );
+    v3.clear();
+    for (int i=0; i<n/k; i++)
+        v3.push_back( db->search( h1 , k1 , mend_string("k"+itos( i ),len) , mend_string("k"+itos( i ),len) ) );
+    for (int i=0; i<n/k; i++)
+    {
+        cout<<'k'<<i<<" :"<<endl;
+        index_t tmpi;
+        tmpi = v3[i]->next();
+        while (tmpi>=0)
+        {
+            cout<<db->get( h1 , tmpi )<<' ';
+//            db->get( h1 , tmpi );
+            tmpi = v3[i]->next();
+        }
+        cout<<endl;
+    }
+
 
 }
 
