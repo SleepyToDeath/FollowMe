@@ -40,6 +40,8 @@ index_t FM_database::atoi( string s )
 
 string FM_database::mend_string( string s , size_t len )
 {
+    if ( s.length() > len )
+        return s.substr( 0 , len );
     size_t l = s.length();
     for (int i=l; i<len; i++)
         s+=' ';
@@ -205,9 +207,12 @@ void database::clear_table( index_t handler )
     if (! fio.is_open() ) cout<< " open fail 5 \n";
 //    while ( tmpt->cache.count()>0 )
 //		write_back( handler );
-    for (int i=0; i<=tmpt->table_meta_0.max_order; i++)
+    cout<<"storing table "<<handler<<endl;
+    index_t percent=tmpt->table_meta_0.max_order/100;
+    for (index_t i=0; i<=tmpt->table_meta_0.max_order; i++)
         if ( tmpt->cache.find( i ) )
         {
+            if (i%percent==0) cout<<i/percent<<"% finished\n";
             index_t tmpi = write_data( handler , tmpt->cache[i].entry_0 );
             tmpt->keys[ tmpt->table_meta_0.key_num ]->modify( iexts( tmpt->cache[i].entry_0.index ) , tmpi );
             tmpt->cache.del( i );
@@ -455,7 +460,7 @@ Btree::carrier* database::search( index_t handler , index_t key_handler , std::s
 	return tables[ handler ]->keys[ key_handler ]->search( key_1_0 , key_2_0 );
 }
 
-index_t database::add( index_t handler , string value , std::vector<std::string> keys )
+index_t database::add( index_t handler , string value , std::vector<std::string> keys , index_t old_index )
 {
 	table* table_0=tables[ handler ];
 	if ( !table_0->ready ) return -1;
@@ -474,8 +479,18 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 	tmp.valid = 1;
 	tmp.keys = keys;
 	tmp.value = value;
-	tmp.index = table_0->table_meta_0.max_order+1;
-	table_0->table_meta_0.max_order++;
+    if ( old_index >= 0 )
+    {
+        if ( old_index > table_0->table_meta_0.max_order
+             || table_0->keys[ table_0->table_meta_0.key_num ]->search( iexts(old_index) ) >= 0 )
+            return -1;
+        tmp.index = old_index;
+    }
+    else
+    {
+        tmp.index = table_0->table_meta_0.max_order+1;
+        table_0->table_meta_0.max_order++;
+    }
 	tmp.keys.push_back( iexts(tmp.index) );
 /*    if (tmp.index== 19)
     {
@@ -621,6 +636,8 @@ string database::get( index_t handler , index_t index )
 	if ( !tmpt->cache.find( index ) )
 	{
 		index_t pos_0 = tmpt->keys[ tmpt->table_meta_0.key_num ]->search( iexts(index) );
+        if ( pos_0 < 0 )
+            return "";
 		wanted_entry = read_data( handler , pos_0 );
         if ( wanted_entry.index != index )
         {

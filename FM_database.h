@@ -312,7 +312,7 @@ class database
 	void init_table( index_t handler );
 
 	std::string del( index_t handler , index_t index ); // return the value , "" if fail
-	index_t add( index_t handler , std::string value , std::vector<std::string> keys=std::vector<std::string>() );
+    index_t add( index_t handler , std::string value , std::vector<std::string> keys=std::vector<std::string>() , index_t old_index = -1 );
 	std::string get( index_t handler , index_t index );
 	Btree::carrier* search( index_t handler , index_t key_handler , std::string key_1_0 , std::string key_2_0 );
 

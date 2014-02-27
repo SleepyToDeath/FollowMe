@@ -1,4 +1,4 @@
-#include"FM_database.h"
+#include"FM_ui.h"
 #include<iostream>
 using namespace FM_database;
 using std::string;
@@ -36,7 +36,7 @@ void basic()
 
 void small()
 {
-    int n = 30000;
+    int n = 100000;
     int k = 335;
     int len = 20;
     database* db = new database( true );
@@ -45,7 +45,7 @@ void small()
     db->init_table( h1 );
 	vector<string> v1;
 	vector< vector<string> > v2;
-	for (int i=0; i<n; i++)
+    for (int i=0; i<n; i++)
 	{
         v1.push_back( mend_string(itos( i ),len) );
         v2.push_back( vector<string>( 1 , mend_string("k"+itos( i%(n/k) ),len) ) );
@@ -93,7 +93,13 @@ void small()
 
 }
 
+void normal_run( bool creative )
+{
+    FM_ui ui( creative );
+    ui.run();
+}
+
 int main()
 {
-	small();
+    normal_run( true );
 }
