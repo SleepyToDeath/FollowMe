@@ -477,10 +477,10 @@ index_t database::add( index_t handler , string value , std::vector<std::string>
 	tmp.index = table_0->table_meta_0.max_order+1;
 	table_0->table_meta_0.max_order++;
 	tmp.keys.push_back( iexts(tmp.index) );
-    if (tmp.index== 19)
+/*    if (tmp.index== 19)
     {
         cout<<' ';
-    }
+    }*/
 
 	//add to cache
 	add_to_cache( handler , tmp );
@@ -540,19 +540,19 @@ string database::del( index_t handler , index_t index )
 {
     table* tmpt = tables[handler];
 
-    if ( index == 210 )
+/*    if ( index == 80 )
     {
         cout<<' ';
-    }
+    }*/
 
-    {
+/*    {
         index_t tmpi1=tmpt->keys[0]->count(-2);
         index_t tmpi2=tmpt->keys[1]->count(-2);
-        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1)
+        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1 || tmpi1+index/5!=5000)
         {
             cout<<" error may occur here 7\n";
         }
-    }
+    }*/
 
 
 	if ( !tmpt->ready ) return "";
@@ -595,24 +595,24 @@ string database::del( index_t handler , index_t index )
 
     tmpt->keys[ tmpt->table_meta_0.key_num ]->del( iexts( index ) , tmpp );
 
-    {
+/*    {
         index_t tmpi1=tmpt->keys[0]->count(-2);
         index_t tmpi2=tmpt->keys[1]->count(-2);
-        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1)
+        if (tmpi1!= tmpi2 || tmpi1>tmpt->table_meta_0.max_order+1 || tmpi1+index/5!=4999)
         {
             cout<<" error may occur here 7\n";
         }
-    }
+    }*/
 
     return tmpe.value;
 }
 
 string database::get( index_t handler , index_t index )
 {
-    if (index==90)
+/*    if (index==90)
     {
         cout<<' ';
-    }
+    }*/
 	table* tmpt = tables[ handler ];
 	if ( !tmpt->ready ) return "";
 	entry wanted_entry;
@@ -660,10 +660,10 @@ string database::get( index_t handler , index_t index )
 
 index_t database::write_data( index_t handler , entry tmpe , bool relocate ) 
 {
-    if (tmpe.index==90)
+/*    if (tmpe.index==90)
     {
         cout<<' ';
-    }
+    }*/
     table* tmpt = tables[ handler ];
 /*    if ( tmpe.index>100 )
     {
@@ -935,7 +935,7 @@ index_t hash<key_t,value_t>::h0( string value ) // BKDR hash
 template<class key_t , class value_t>
 index_t hash<key_t,value_t>::h( key_t key , index_t i )
 {
-	index_t key_1=h0(key);
+    index_t key_1=h0(key);
 //    cout<<key_1<<endl;
     return abs( key_1 % prime_0 + i *prime_1 ) % prime_0;
 }
@@ -1107,7 +1107,8 @@ index_t Btree::count( index_t cur )
     if ( cur==-2 ) cur = meta.root;
     node& tmpn = accessor( cur );
     index_t counter = tmpn.key_num;
-    for (int i=0;i<tmpn.key_num+1;i++)
+    index_t l= tmpn.key_num+1;
+    for (int i=0;i<l;i++)
     {
         node& tmpn = accessor( cur );
         counter+=count( tmpn.sons[i] );
@@ -1129,10 +1130,10 @@ void Btree::add( string key_0 , index_t index_0 )
 /*	int l = tmp.key.length();
 	for (int i=l; i<meta.key_size; i++)
         tmp.key+=" "; */
-    if (index_0==15)
+/*    if (index_0==15)
     {
         cout<<' ';
-    }
+    }*/
 /*    if (!fio.good())
     {
         cout<<" error may occur here a \n";
@@ -1251,10 +1252,10 @@ void Btree::del( string key_0 , index_t index_0 )
 /*	int l = tmp.key.length();
     for (int i=l; i<meta.key_size; i++)
         tmp.key+=" "; */
-    if (index_0 == 70)
+/*    if (index_0 == 70)
     {
         cout<<' ';
-    }
+    }*/
 	index_t cur = meta.root;
 //    index_t prev = cur;
     int tmpi = -1;
@@ -1344,15 +1345,15 @@ void Btree::del( string key_0 , index_t index_0 )
 				}
                 tmpnb.sons[ tmpnb.key_num-1 ] = tmpnb.sons[ tmpnb.key_num ];
 				tmpn.key_num++;
-				tmpnb.key_num++;
+                tmpnb.key_num--;
 			}
 		}
 		else
 		{
-            if (cur==0)
+/*            if (cur==0)
             {
                 cout<<' ';
-            }
+            }*/
             // combination
 			if ( tmpi==-1 )
 			{
@@ -1360,8 +1361,8 @@ void Btree::del( string key_0 , index_t index_0 )
 				tmpn.keys[ tmpn.key_num ] = tmpnp.keys[ 0 ];
 				for (int i=0; i<tmpnb.key_num; i++)
 				 {
-                    tmpn = accessor ( cur );
-                    tmpnb = accessor ( tmpib );
+                     tmpn = accessor ( cur );
+                     tmpnb = accessor ( tmpib );
 					 tmpn.keys[ i+tmpn.key_num+1 ] = tmpnb.keys[i];
 					 tmpn.sons[ i+tmpn.key_num+1 ] = tmpnb.sons[i];
                      if ( tmpn.sons[ i+tmpn.key_num+1 ] >= 0 )
@@ -1371,6 +1372,7 @@ void Btree::del( string key_0 , index_t index_0 )
                  if ( tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] >= 0 )
                      accessor( tmpn.sons[ tmpn.key_num+tmpnb.key_num+1 ] ).parent = cur;
                  tmpn.key_num = tmpn.key_num+tmpnb.key_num+1;
+                 tmpnp = accessor( tmpn.parent );
 				 for (int i=0; i<tmpnp.key_num-1; i++)
 				 {
 					 tmpnp.keys[i] = tmpnp.keys[i+1];
@@ -1399,7 +1401,8 @@ void Btree::del( string key_0 , index_t index_0 )
                  if ( tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] >= 0 )
                      accessor( tmpnb.sons[ tmpn.key_num+tmpnb.key_num+1 ] ).parent = tmpib;
                  tmpnb.key_num = tmpn.key_num+tmpnb.key_num+1;
-                 for (int i=tmpi+1; i<tmpnp.key_num-1; i++)
+                 tmpnp = accessor( tmpn.parent );
+                 for (int i=tmpi; i<tmpnp.key_num-1; i++)
 				 {
 					 tmpnp.keys[i] = tmpnp.keys[i+1];
 					 tmpnp.sons[i+1] = tmpnp.sons[i+2];
@@ -1429,10 +1432,10 @@ void Btree::modify( string key_0 , index_t new_value )
 /*	int l = key_0.length();
     for (int i=l; i<meta.key_size; i++)
         key_0+=" "; */
-    if (key_0==iexts(15))
+/*    if (key_0==iexts(15))
     {
         cout<<' ';
-    }
+    }*/
     pair<index_t,index_t> tmp = inner_search( key_0 );
 	if ( tmp.first == -1 ) return;
 	accessor( tmp.first ).keys[ tmp.second ].index = new_value;
@@ -1509,6 +1512,43 @@ std::pair<index_t,index_t> Btree::inner_search( std::string key_0 )
 
 Btree::node& Btree::accessor( index_t pos )
 {
+/*    if (pos<0 || pos > meta.max_pos )
+    {
+        cout<<"error may occur here b\n";
+    }*/
+ /*   {
+
+        index_t tmpi = cache_tail;
+        int count=0;
+        cout<<"up count:"<<cache.count()<<" pos:"<<pos<<endl;
+        while (tmpi!=cache_head)
+        {
+            cout<< tmpi << " -> ";
+            count++;
+            tmpi = cache[tmpi].prev;
+        }
+        cout<< tmpi<<endl;
+        if (tmpi>=0) count++;
+        if (count<cache.count())
+        {
+            cout<<" error may occur here 5\n";
+        }
+        tmpi = cache_head;
+        count=0;
+        while (tmpi!=cache_tail)
+        {
+            count++;
+            tmpi = cache[tmpi].next;
+        }
+        if (tmpi>=0) count++;
+        if (count<cache.count())
+        {
+            cout<<" error may occur here 5\n";
+        }
+
+    }*/
+
+
 /*    if (pos == 32736)
     {
         cout<<' ';
@@ -1542,20 +1582,6 @@ Btree::node& Btree::accessor( index_t pos )
     if ( cache_tail >= 0 && cache_tail != pos )
 		cache[ cache_tail ].next = pos;
     cache_tail = pos;
-/*    {
-        index_t tmpi = cache_tail;
-        int count=0;
-        while (tmpi!=cache_head)
-        {
-            count++;
-            tmpi = cache[tmpi].prev;
-        }
-        if (tmpi>=0) count++;
-        if (count<cache.count())
-        {
-            cout<<" error may occur here 5\n";
-        }
-    }*/
 	// eliminate oldest one
 	if ( cache.count() > meta.cache_capacity )
 	{
@@ -1567,7 +1593,37 @@ Btree::node& Btree::accessor( index_t pos )
 		cache.del( tmpi );
 //		cache[ cache_head ].prev = -1;
 	}
-		
+/*        {
+        index_t tmpi = cache_tail;
+        int count=0;
+        cout<<"down count:"<<cache.count()<<" pos:"<<pos<<endl;
+        while (tmpi!=cache_head)
+        {
+            cout<< tmpi<<" -> ";
+            count++;
+            tmpi = cache[tmpi].prev;
+        }
+        cout<< tmpi<<endl;
+        if (tmpi>=0) count++;
+        if (count<cache.count())
+        {
+            cout<<" error may occur here 5\n";
+        }
+        tmpi = cache_head;
+        count=0;
+        while (tmpi!=cache_tail)
+        {
+            count++;
+            tmpi = cache[tmpi].next;
+        }
+        if (tmpi>=0) count++;
+        if (count<cache.count())
+        {
+            cout<<" error may occur here 5\n";
+        }
+
+    }*/
+
 /*    if (cache[pos].sons[0]>=0 && cache[pos].sons[cache[pos].key_num]<0)
     {
         node& tmpn=cache[pos];
@@ -1614,6 +1670,7 @@ void Btree::del_node( index_t pos )
 		if ( cache_tail == pos )
 			cache_tail = cache[pos].prev;
 	}
+    cache.del( pos );
 	fio.seekp( pos );
 	put_int( fio , meta.free_head );
 	meta.free_head = pos;
@@ -1621,10 +1678,10 @@ void Btree::del_node( index_t pos )
 
 void Btree::write_node( index_t pos , node n )
 {
-    if (pos==0)
+/*    if (pos==0)
     {
         cout<<' ';
-    }
+    }*/
 	fio.seekp( pos );
 	put_int( fio , n.key_num );
 	put_int( fio , n.parent );

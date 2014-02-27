@@ -36,8 +36,8 @@ void basic()
 
 void small()
 {
-    int n = 1000;
-    int k = 50;
+    int n = 30000;
+    int k = 335;
     int len = 20;
     database* db = new database( true );
     index_t h1 = db->new_table( len );
