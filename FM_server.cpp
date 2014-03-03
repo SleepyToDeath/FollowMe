@@ -26,6 +26,12 @@ index_t stoi( string s )
     return tmpi;
 }
 
+string special_mend( string s )
+{
+
+
+}
+
 
 string FM_user::value()
 {
@@ -78,7 +84,6 @@ vector<string> FM_news::keys()
 {
     vector<string> keys;
     keys.push_back( iexts( publisher ) );
-    keys.push_back( iexts( source ) );
     return keys;
 }
 
@@ -129,6 +134,18 @@ FM_relation::FM_relation( string value )
 FM_server::~FM_server()
 {
     delete db;
+    ofstream fout( "server.meta" );
+    fout<<"userh="<<userh<<endl;
+    fout<<"usernamekh="<<usernamekh<<endl;
+    fout<<"namekh="<<namekh<<endl;
+    fout<<"birthdaykh="<<birthdaykh<<endl;
+    fout<<"homekh="<<homekh<<endl;
+    fout<<"newsh="<<newsh<<endl;
+    fout<<"publisherkh="<<publisherkh<<endl;
+    fout<<"relationh="<<relationh<<endl;
+    fout<<"followingkh="<<followingkh<<endl;
+    fout<<"followedkh="<<followedkh<<endl;
+    fout.close();
 }
 
 FM_server::FM_server( bool creative )
@@ -375,7 +392,7 @@ FM_news FM_server::news_list()
     if ( tmpid >= 0 )
     {
         news.push_back( FM_news( db->get( newsh , tmpid ) ) );
-        size_t j = news.size();
+        size_t j = news.size()-1;
         while ( j>0 && news[j].order > news[j-1].order )
         {
             FM_news tmpn = news[j];
@@ -401,9 +418,12 @@ bool FM_server::share( index_t index )
 {
     string tmps = db->get( newsh , index );
     if ( tmps == "" ) return false;
-    FM_news tmpn = FM_news( );
+    FM_news tmpn = FM_news( tmps );
     tmpn.publisher = id;
-    db->add( newsh , tmpn.value() , tmpn.keys() );
+    tmpn.order = db->add( newsh , tmpn.value() , tmpn.keys() );
+    db->del( newsh , tmpn.order );
+    db->add( newsh , tmpn.value() , tmpn.keys() , tmpn.order );
+    return true;
 }
 
 FM_user FM_server::get_user()
@@ -418,5 +438,7 @@ index_t FM_server::get_id()
 
 string FM_server::get_name( index_t id )
 {
-    return FM_user( db->get( userh , id ) ).name;
+    string s = db->get( userh , id );
+    if ( s == "" ) return "";
+    else return FM_user( s ).name;
 }

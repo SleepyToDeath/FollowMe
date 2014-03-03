@@ -8,6 +8,7 @@ class FM_ui
 	public:
 
     FM_ui( bool creative = false );
+    ~FM_ui(){ delete server; }
     void run();
 
     private:

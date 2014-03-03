@@ -33,9 +33,15 @@ index_t FM_database::atoi( string s )
 	int j=0;
 	while ( s[j]==' ' || s[j]=='\t' )
 		j++;
+    index_t sign = 1;
+    if ( s[j]=='-' )
+    {
+        sign = -1;
+        j++;
+    }
 	for (;j<l;j++)
 		i=i*10+s[j]-'0';
-	return i;
+    return sign*i;
 }
 
 string FM_database::mend_string( string s , size_t len )
@@ -163,7 +169,7 @@ database::database( bool new_db )
 database::~database()
 {
 	fstream fio;
-    ofstream fout( (store_directory+"database.meta").c_str(), ios::app );
+    ofstream fout( (store_directory+"database.meta").c_str() ); //, ios::app );
 	fout.close();
 	fio.open( (store_directory+"database.meta").c_str() );
     if (! fio.is_open() ) cout<< " open fail 4 \n";
@@ -184,8 +190,23 @@ database::~database()
 
 void database::clear_table( index_t handler )
 {
-	table* tmpt = tables[ handler ];
-    ofstream fout( (store_directory+itos( handler )+".meta").c_str() , ios::app );
+    table* tmpt = tables[ handler ];
+
+     cout<<"storing table "<<handler<<endl;
+    index_t percent=tmpt->table_meta_0.max_order/100;
+    if ( percent == 0 ) percent++;
+    for (index_t i=0; i<=tmpt->table_meta_0.max_order; i++)
+    {
+        if (i%percent==0) cout<<i/percent<<"% finished\n";
+        if ( tmpt->cache.find( i ) )
+        {
+            index_t tmpi = write_data( handler , tmpt->cache[i].entry_0 );
+            tmpt->keys[ tmpt->table_meta_0.key_num ]->modify( iexts( tmpt->cache[i].entry_0.index ) , tmpi );
+            tmpt->cache.del( i );
+        }
+    }
+
+   ofstream fout( (store_directory+itos( handler )+".meta").c_str() , ios::app );
 	fout.close();
 	fstream fio( (store_directory+itos( handler )+".meta").c_str() );
     if (! fio.is_open() ) cout<< " open fail 8 \n";
@@ -207,16 +228,6 @@ void database::clear_table( index_t handler )
     if (! fio.is_open() ) cout<< " open fail 5 \n";
 //    while ( tmpt->cache.count()>0 )
 //		write_back( handler );
-    cout<<"storing table "<<handler<<endl;
-    index_t percent=tmpt->table_meta_0.max_order/100;
-    for (index_t i=0; i<=tmpt->table_meta_0.max_order; i++)
-        if ( tmpt->cache.find( i ) )
-        {
-            if (i%percent==0) cout<<i/percent<<"% finished\n";
-            index_t tmpi = write_data( handler , tmpt->cache[i].entry_0 );
-            tmpt->keys[ tmpt->table_meta_0.key_num ]->modify( iexts( tmpt->cache[i].entry_0.index ) , tmpi );
-            tmpt->cache.del( i );
-        }
 }
 /* table & cache */
 
@@ -624,10 +635,10 @@ string database::del( index_t handler , index_t index )
 
 string database::get( index_t handler , index_t index )
 {
-/*    if (index==90)
+    if (handler == 2 && index==0)
     {
         cout<<' ';
-    }*/
+    }
 	table* tmpt = tables[ handler ];
 	if ( !tmpt->ready ) return "";
 	entry wanted_entry;
@@ -1077,7 +1088,7 @@ Btree::Btree( std::string index , bool resume )
 			size_t pos = s.find("=");
 			meta.free_head = atoi(s.substr(pos+1,s.length()-pos-1));
 		}
-		else if (s.find("heght")!=string::npos) 
+        else if (s.find("height")!=string::npos)
 		{
 			size_t pos = s.find("=");
 			meta.height = atoi(s.substr(pos+1,s.length()-pos-1));
@@ -1103,7 +1114,7 @@ Btree::~Btree()
         if ( cache.find( i*node_size_byte ) )
             write_node( i*node_size_byte , cache[i*node_size_byte] );
 	fio.close();
-    ofstream fout( (store_directory+meta.index+".meta").c_str() , ios::app );
+    ofstream fout( (store_directory+meta.index+".meta").c_str() );//, ios::app );
 	fout.close();
     fio.open( (store_directory+meta.index+".meta").c_str() );
     if (! fio.is_open() ) cout<< " open fail 3 \n";
@@ -1139,9 +1150,9 @@ void Btree::add( string key_0 , index_t index_0 )
 	key tmp;
 	tmp.key = key_0;
 	tmp.index = index_0;
-/*    if ( tmp.index > 10000 )
+ /*   if ( tmp.index == 1 && this->meta.index=="1_1" )
     {
-        cout<<" error may occur at Btree::add \n";
+        cout<<" ";
     }*/
 	// make sure every key is of length key_size
 /*	int l = tmp.key.length();

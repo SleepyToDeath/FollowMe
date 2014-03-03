@@ -69,6 +69,7 @@ index_t read_int()
         cout<<"An int please.\n";
         cin.clear();
         cin.sync();
+        getline( cin , s );
         cin>>tmpi;
     }
     getline(cin,s);
@@ -216,6 +217,7 @@ int FM_ui::search()
     }
     for (int i=0; i<list.size(); i++)
     {
+        if ( list[i].first == server->get_id() ) continue;
         cout<<'['<<list[i].first<<"] "<<list[i].second.username<<endl;
         cout<<"name: "<<list[i].second.name<<" gender: "<<list[i].second.gender<<endl;
         cout<<endl;
@@ -230,6 +232,7 @@ int FM_ui::follow_list()
     vector< pair<index_t,FM_user> > list = server->follow_list();
     for (int i=0; i<list.size(); i++)
     {
+        if ( list[i].first == server->get_id() ) continue;
         cout<<'['<<list[i].first<<"] "<<list[i].second.username<<endl;
         cout<<"name: "<<list[i].second.name<<" gender: "<<list[i].second.gender<<endl;
         cout<<endl;
@@ -246,7 +249,7 @@ int FM_ui::news_list()
     while (true)
     {
         if ( !over )
-            for (int i=0; i<30; i++)
+            for (int i=0; i<10; i++)
             {
                 FM_news tmpn = server->news_list();
                 if ( tmpn.order < 0 )
@@ -290,7 +293,7 @@ int FM_ui::publish()
     cout<<"Shout It Out Loudly :\n";
     string news = read_string( FM_news::news_len );
     FM_news tmpn;
-    tmpn.value() = news;
+    tmpn.news = news;
     tmpn.source = server->get_id();
     tmpn.publisher = tmpn.source;
     server->post( tmpn );
