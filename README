@@ -1,3 +1,31 @@
 This is my course project, a social network with a simple database.( Well, actually it's not so 'social' XD )
 I don't think anyone would find my poor code useful but just in case, you may read it but please DON'T copy and use any piece of code in your homework or you are to take the responsibility.
 No more to tell you :-p
+===============================================
+Well, since the final interview of this lesson was over( in fact one year ago ),
+I can explain some details for this project, although I'm sure no one would read it.
+
+I only explain the database part, for the UI is simply a command line.
+
+Basic:
+First of all, everything is a string ( Don't relate it to linux convention, it's merely laziness... )
+Each tuple has a relatively long content and several relatively short keys.
+
+Cache:
+Both content and keys have cache.
+Content is stored in memory in a hash table while keys are maintained with B tree.
+
+Cache for keys is simply a list of B tree nodes in touch order. Oldest ones are flushed back to disk.
+This should work well because most of disk access will be wasted on nodes close to root. Since they 
+are touched often, they should be kept in cache with this strategy.
+
+Cache for content is relatively complex. 
+The main idea is:
+1. Data about popular people will be used more frequently. So we should keep more of them in memory.
+2. We will probably need a bunch of data for a single person every time so we'd better store them together.
+
+I rank contents by popularity of a central key ( in this case, I set it to user id ).
+Contents with most popular central keys are kept in memory.
+I flush contents with same central key back to disk togeter.
+
+More details can be found in Design.txt, if you can understand my stream of consciousness.
